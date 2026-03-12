@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useEffectEvent, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useEffectEvent, useRef } from 'react'
 import { GAME_CONFIG } from '../config/gameConfig'
 import { useGameStore } from '../store/gameStore'
 import { useGameInput } from '../hooks/useGameInput'
