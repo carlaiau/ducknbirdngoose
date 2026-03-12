@@ -1,0 +1,56 @@
+:root {
+  font-family: 'Trebuchet MS', 'Avenir Next', sans-serif;
+  line-height: 1.4;
+  font-weight: 500;
+  color: #fff4d6;
+  background:
+    radial-gradient(circle at top, #b9d8ff 0%, #90baf1 28%, #6586b6 48%, #33455d 100%);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  --bg: #091b2f;
+  --panel: rgba(13, 31, 48, 0.78);
+  --panel-strong: rgba(7, 20, 31, 0.9);
+  --ink: #fff4d6;
+  --ink-muted: #d3dbcf;
+  --line: rgba(255, 244, 214, 0.18);
+  --accent: #ffb347;
+  --accent-soft: #ffd898;
+  --mint: #9bd2b3;
+  --pond: #63b2c7;
+  --pond-deep: #3c7898;
+  --berry: #8d4d63;
+  --shadow: 0 24px 80px rgba(6, 16, 27, 0.38);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  min-width: 320px;
+  min-height: 100%;
+  margin: 0;
+}
+
+body {
+  min-height: 100vh;
+  overflow: hidden;
+}
+
+button,
+a,
+input {
+  font: inherit;
+}
+
+button {
+  border: 0;
+}
+
+a {
+  color: inherit;
+}
