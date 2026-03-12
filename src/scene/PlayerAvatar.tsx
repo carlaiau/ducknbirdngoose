@@ -7,10 +7,11 @@ export const PlayerAvatar = () => {
   const species = useSelectedSpecies()
   const palette = useSelectedPalette()
   const player = useGameStore((state) => state.player)
+  const moveTarget = useGameStore((state) => state.moveTarget)
   const input = useGameStore((state) => state.input)
   const worldTime = useGameStore((state) => state.worldTime)
 
-  const isMoving = input.up || input.right || input.down || input.left
+  const isMoving = input.up || input.right || input.down || input.left || moveTarget !== null
   const yOffset = useMemo(
     () => 0.2 + (isMoving ? Math.sin(worldTime * 11) * 0.06 : Math.sin(worldTime * 4) * 0.02),
     [isMoving, worldTime],

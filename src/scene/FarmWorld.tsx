@@ -1,6 +1,6 @@
 import { Html } from '@react-three/drei'
 import { useGameStore } from '../store/gameStore'
-import { FollowerFlock } from './FollowerFlock'
+import { ChickFlock } from './ChickFlock'
 import { NestCluster } from './NestCluster'
 import { PlayerAvatar } from './PlayerAvatar'
 import { WormField } from './WormField'
@@ -29,6 +29,23 @@ const WaterfallStandIn = () => (
       <meshStandardMaterial color="#9cecff" transparent opacity={0.6} flatShading />
     </mesh>
   </group>
+)
+
+const PondBackdrop = () => (
+  <>
+    <mesh receiveShadow rotation={[-Math.PI / 2, 0, 0]} position={[1.9, 0.04, -0.2]} scale={[1.1, 1.25, 1]}>
+      <circleGeometry args={[5.3, 48]} />
+      <meshStandardMaterial color="#68bfd6" flatShading />
+    </mesh>
+    <mesh receiveShadow rotation={[-Math.PI / 2, 0, 0]} position={[1.9, 0.045, -0.2]} scale={[0.8, 0.95, 1]}>
+      <circleGeometry args={[4.1, 42]} />
+      <meshStandardMaterial color="#3c799b" flatShading />
+    </mesh>
+    <mesh receiveShadow rotation={[-Math.PI / 2, 0, 0]} position={[-2.2, 0.03, -1.8]}>
+      <planeGeometry args={[10.4, 3.3]} />
+      <meshStandardMaterial color="#c7b17c" flatShading />
+    </mesh>
+  </>
 )
 
 const FrankieHouse = () => (
@@ -130,19 +147,7 @@ export const FarmWorld = () => {
         <meshStandardMaterial color="#87ad74" flatShading />
       </mesh>
 
-      <mesh receiveShadow rotation={[-Math.PI / 2, 0, 0]} position={[1.9, 0.04, -0.2]} scale={[1.1, 1.25, 1]}>
-        <circleGeometry args={[5.3, 48]} />
-        <meshStandardMaterial color="#68bfd6" flatShading />
-      </mesh>
-      <mesh receiveShadow rotation={[-Math.PI / 2, 0, 0]} position={[1.9, 0.045, -0.2]} scale={[0.8, 0.95, 1]}>
-        <circleGeometry args={[4.1, 42]} />
-        <meshStandardMaterial color="#3c799b" flatShading />
-      </mesh>
-
-      <mesh receiveShadow rotation={[-Math.PI / 2, 0, 0]} position={[-2.2, 0.03, -1.8]}>
-        <planeGeometry args={[10.4, 3.3]} />
-        <meshStandardMaterial color="#c7b17c" flatShading />
-      </mesh>
+      <PondBackdrop />
 
       <FrankieHouse />
       <ReedBank isUnlocked={reedsUnlocked} />
@@ -162,7 +167,7 @@ export const FarmWorld = () => {
 
       <NestCluster />
       <WormField />
-      <FollowerFlock />
+      <ChickFlock />
       <PlayerAvatar />
     </group>
   )

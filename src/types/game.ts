@@ -17,6 +17,8 @@ export type PaletteId =
 export type ZoneId = 'yard' | 'reeds' | 'dock'
 export type InputDirection = 'up' | 'right' | 'down' | 'left'
 export type EggStage = 'egg' | 'baby'
+export type ChickMode = 'follow' | 'patrol'
+export type ChickHungerState = 'sated' | 'hungry'
 export type SessionPhase = 'menu' | 'playing'
 export type RoundPhase = 'playing' | 'round-clear'
 
@@ -76,11 +78,19 @@ export interface WormState {
   active: boolean
 }
 
-export interface FollowerState {
+export interface ChickState {
   id: string
   label: number
+  zoneId: ZoneId
   position: Vec3
   facing: number
+  mode: ChickMode
+  wanderTarget: Vec3
+  hungerState: ChickHungerState
+  hungerAt: number
+  nextFeedAt: number
+  wormsFed: number
+  wormsNeeded: number
 }
 
 export interface PlayerInventory {

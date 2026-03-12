@@ -3,6 +3,7 @@ import { Canvas, useFrame } from '@react-three/fiber'
 import { useRef } from 'react'
 import type { OrthographicCamera as ThreeOrthographicCamera } from 'three'
 import { useGameStore } from '../store/gameStore'
+import { ClickMoveController } from './ClickMoveController'
 import { FarmWorld } from './FarmWorld'
 import { IsometricCameraRig } from './IsometricCameraRig'
 
@@ -46,6 +47,7 @@ export default function GameScene() {
         shadow-mapSize-height={2048}
       />
       <AdaptiveDpr pixelated />
+      <ClickMoveController />
       <FarmWorld />
       <IsometricCameraRig cameraRef={cameraRef} />
       <GameLoop />

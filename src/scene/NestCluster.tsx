@@ -14,6 +14,7 @@ export const NestCluster = () => {
     <>
       {eggs.map((egg) => {
         const wiggle = egg.stage === 'egg' ? Math.sin(worldTime * 7 + egg.label) * 0.035 : 0
+        const eggTilt = ((egg.label % 3) - 1) * 0.18
 
         return (
           <group key={egg.id} position={egg.position}>
@@ -23,7 +24,7 @@ export const NestCluster = () => {
             </mesh>
 
             {egg.stage === 'egg' ? (
-              <group position={[0, 0.7 + wiggle, 0]}>
+              <group position={[0, 0.58 + wiggle, 0]} rotation={[0, eggTilt, 0]}>
                 <EggModel />
               </group>
             ) : (

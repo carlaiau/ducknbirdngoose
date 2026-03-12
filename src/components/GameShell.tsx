@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState } from 'react'
+import { lazy, Suspense, useEffect, useEffectEvent, useRef, useState } from 'react'
 import { GAME_CONFIG } from '../config/gameConfig'
 import { useGameStore } from '../store/gameStore'
 import { useGameInput } from '../hooks/useGameInput'
@@ -10,30 +10,106 @@ import { LoadingScreen } from './LoadingScreen'
 import { SelectionPanel } from './SelectionPanel'
 
 const LazyGameScene = lazy(() => delayImport(import('../scene/GameScene'), 720))
+const PINCH_STEP_DISTANCE = 14
+
+const getTouchDistance = (touches: TouchList) => {
+  const first = touches.item(0)
+  const second = touches.item(1)
+
+  if (!first || !second) {
+    return 0
+  }
+
+  return Math.hypot(second.clientX - first.clientX, second.clientY - first.clientY)
+}
 
 export const GameShell = () => {
   useGameInput()
 
+  const shellRef = useRef<HTMLDivElement>(null)
+  const pinchDistanceRef = useRef<number | null>(null)
   const isCoarsePointer = useCoarsePointer()
   const phase = useGameStore((state) => state.phase)
   const roundPhase = useGameStore((state) => state.round.phase)
   const roundNumber = useGameStore((state) => state.round.number)
-  const cameraZoom = useGameStore((state) => state.cameraZoom)
   const adjustCameraZoom = useGameStore((state) => state.adjustCameraZoom)
   const resetSession = useGameStore((state) => state.resetSession)
-  const [controlsDismissed, setControlsDismissed] = useState(false)
-  const [waterfallDismissed, setWaterfallDismissed] = useState(false)
-  const [controlsPinnedOpen, setControlsPinnedOpen] = useState(false)
-  const [waterfallPinnedOpen, setWaterfallPinnedOpen] = useState(false)
+  
 
-  const zoomPercent = Math.round((cameraZoom / GAME_CONFIG.cameraZoom.default) * 100)
-  const showControlsCard =
-    phase === 'playing' && ((controlsPinnedOpen || !isCoarsePointer) && !controlsDismissed)
-  const showWaterfallCard =
-    phase === 'playing' && ((waterfallPinnedOpen || !isCoarsePointer) && !waterfallDismissed)
+  const resetPinch = useEffectEvent(() => {
+    pinchDistanceRef.current = null
+  })
+
+  const handleTouchStart = useEffectEvent((event: TouchEvent) => {
+    if (phase !== 'playing' || event.touches.length < 2) {
+      if (event.touches.length < 2) {
+        pinchDistanceRef.current = null
+      }
+      return
+    }
+
+    if (event.cancelable) {
+      event.preventDefault()
+    }
+
+    pinchDistanceRef.current = getTouchDistance(event.touches)
+  })
+
+  const handleTouchMove = useEffectEvent((event: TouchEvent) => {
+    if (phase !== 'playing' || event.touches.length < 2) {
+      pinchDistanceRef.current = null
+      return
+    }
+
+    if (event.cancelable) {
+      event.preventDefault()
+    }
+
+    const nextDistance = getTouchDistance(event.touches)
+    const previousDistance = pinchDistanceRef.current
+    pinchDistanceRef.current = nextDistance
+
+    if (previousDistance == null) {
+      return
+    }
+
+    const distanceDelta = nextDistance - previousDistance
+    const stepCount = Math.trunc(Math.abs(distanceDelta) / PINCH_STEP_DISTANCE)
+
+    if (stepCount < 1) {
+      return
+    }
+
+    adjustCameraZoom(Math.sign(distanceDelta) * GAME_CONFIG.cameraZoom.step * stepCount)
+  })
+
+  useEffect(() => {
+    const shell = shellRef.current
+
+    if (!shell) {
+      return
+    }
+
+    const onTouchStart = (event: TouchEvent) => handleTouchStart(event)
+    const onTouchMove = (event: TouchEvent) => handleTouchMove(event)
+    const onTouchEnd = () => resetPinch()
+
+    shell.addEventListener('touchstart', onTouchStart, { passive: false })
+    shell.addEventListener('touchmove', onTouchMove, { passive: false })
+    shell.addEventListener('touchend', onTouchEnd)
+    shell.addEventListener('touchcancel', onTouchEnd)
+
+    return () => {
+      shell.removeEventListener('touchstart', onTouchStart)
+      shell.removeEventListener('touchmove', onTouchMove)
+      shell.removeEventListener('touchend', onTouchEnd)
+      shell.removeEventListener('touchcancel', onTouchEnd)
+    }
+  }, [])
 
   return (
     <div
+      ref={shellRef}
       className="app-shell"
       onWheelCapture={(event) => {
         if (phase !== 'playing') {
@@ -54,112 +130,9 @@ export const GameShell = () => {
         {phase === 'playing' ? <Hud /> : <div />}
 
         {phase === 'playing' ? (
-          <div className="bottom-tools">
-            {(showControlsCard || showWaterfallCard) ? (
-              <div className="instructions-bar">
-                {showControlsCard ? (
-                  <div className="instructions-card">
-                    <div className="card-header">
-                      <div className="eyebrow">Controls</div>
-                      <button
-                        type="button"
-                        className="icon-button"
-                        onClick={() => {
-                          setControlsDismissed(true)
-                          setControlsPinnedOpen(false)
-                        }}
-                        aria-label="Hide controls panel"
-                      >
-                        ×
-                      </button>
-                    </div>
-                    <p>
-                      Desktop: move with <strong>WASD</strong> or arrow keys. Mobile: use the on-screen diamond pad.
-                    </p>
-                    <p>
-                      Walk through worms to collect them, then stand next to any hungry baby to auto-feed.
-                    </p>
-                  </div>
-                ) : null}
-
-                {showWaterfallCard ? (
-                  <div className="instructions-card">
-                    <div className="card-header">
-                      <div className="status-pill">Pond edge live</div>
-                      <button
-                        type="button"
-                        className="icon-button"
-                        onClick={() => {
-                          setWaterfallDismissed(true)
-                          setWaterfallPinnedOpen(false)
-                        }}
-                        aria-label="Hide waterfall panel"
-                      >
-                        ×
-                      </button>
-                    </div>
-                    <p>
-                      The far bank now reserves a slot for the requested marketplace waterfall.
-                    </p>
-                    <p>
-                      Procedural scenery keeps the game playable until the purchased/downloaded waterfall mesh is dropped in locally.
-                    </p>
-                  </div>
-                ) : null}
-              </div>
-            ) : (
-              <div />
-            )}
-
-            <div className="tool-tray">
-              <div className="zoom-control" role="group" aria-label="Camera zoom controls">
-                <button
-                  type="button"
-                  className="tool-button"
-                  onClick={() => adjustCameraZoom(-GAME_CONFIG.cameraZoom.step)}
-                  aria-label="Zoom out"
-                >
-                  -
-                </button>
-                <div className="zoom-readout">
-                  <span className="metric-label">Zoom</span>
-                  <strong>{zoomPercent}%</strong>
-                </div>
-                <button
-                  type="button"
-                  className="tool-button"
-                  onClick={() => adjustCameraZoom(GAME_CONFIG.cameraZoom.step)}
-                  aria-label="Zoom in"
-                >
-                  +
-                </button>
-              </div>
-
-              <div className="chip-row">
-                {!showControlsCard ? (
-                  <button
-                    type="button"
-                    className="chip-button"
-                    onClick={() => {
-                      setControlsDismissed(false)
-                      setControlsPinnedOpen(true)
-                    }}
-                  >
-                    Show controls
-                  </button>
-                ) : null}
-                {!showWaterfallCard ? (
-                  <button
-                    type="button"
-                    className="chip-button"
-                    onClick={() => {
-                      setWaterfallDismissed(false)
-                      setWaterfallPinnedOpen(true)
-                    }}
-                  >
-                    Show pond edge
-                  </button>
-                ) : null}
+          <div className={`bottom-tools${isCoarsePointer ? ' is-compact' : ''}`}>
+            <div className="tool-tray" data-ui-touch="true">
+              <div className={`chip-row${isCoarsePointer ? ' is-compact' : ''}`}>
                 <button type="button" className="chip-button" onClick={resetSession}>
                   Back to picker
                 </button>

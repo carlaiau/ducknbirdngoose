@@ -6,6 +6,6 @@ Suggested names:
 - `duck-marketplace.glb`
 - `goose-marketplace.glb`
 - `pond-marketplace.glb`
-- `waterfall-marketplace.glb`
+- `worm-marketplace.glb`
 
-The current game runtime uses procedural stand-ins until these files are added and wired into the scene loaders.
+`npm run assets:import` writes files into this directory and updates the runtime manifest.

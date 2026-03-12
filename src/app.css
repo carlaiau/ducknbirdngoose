@@ -3,11 +3,31 @@
   width: 100vw;
   height: 100vh;
   overflow: hidden;
+  overscroll-behavior: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.app-shell button,
+.app-shell button *,
+.app-shell a,
+.app-shell a *,
+.app-shell [data-ui-touch='true'],
+.app-shell [data-ui-touch='true'] *,
+.hud-layer,
+.hud-layer *,
+.selection-wrap,
+.selection-wrap * {
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .scene-canvas {
   position: absolute !important;
   inset: 0;
+  touch-action: none;
+  z-index: 1;
 }
 
 .hud-layer {
@@ -18,6 +38,7 @@
   flex-direction: column;
   justify-content: space-between;
   padding: 1rem;
+  touch-action: none;
 }
 
 .hud-top {
@@ -27,7 +48,25 @@
   align-items: start;
 }
 
+.hud-mobile {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  width: min(100%, 25rem);
+  pointer-events: none;
+}
+
+.hud-mobile-row {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.45rem;
+}
+.selection-panel{
+  
+}
 .hud-card,
+.hud-mobile-button,
+.hud-mobile-detail,
 .selection-panel,
 .instructions-card,
 .asset-card,
@@ -38,10 +77,52 @@
   border-radius: 22px;
   box-shadow: var(--shadow);
   backdrop-filter: blur(14px);
+  z-index: 9;
 }
 
 .hud-card {
   padding: 0.8rem 1rem;
+}
+
+.hud-mobile-button {
+  min-height: 3.25rem;
+  padding: 0.55rem 0.4rem;
+  border-radius: 18px;
+  text-align: center;
+  pointer-events: auto;
+  touch-action: manipulation;
+  transition:
+    transform 150ms ease,
+    border-color 150ms ease,
+    background 150ms ease;
+}
+
+.hud-mobile-button.is-active {
+  border-color: rgba(255, 216, 152, 0.84);
+  background: linear-gradient(180deg, rgba(53, 78, 93, 0.96), rgba(14, 28, 40, 0.9));
+}
+
+.hud-mobile-value {
+  display: block;
+  font-size: clamp(1rem, 4.2vw, 1.22rem);
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  color: #fffdf3;
+}
+
+.hud-mobile-detail {
+  max-width: min(100%, 25rem);
+  padding: 0.8rem 0.95rem;
+  border-radius: 18px;
+  pointer-events: auto;
+}
+
+.hud-mobile-detail strong {
+  display: block;
+  margin-top: 0.18rem;
+  color: #fff8e6;
+  font-size: 0.98rem;
 }
 
 .hud-card strong,
@@ -93,7 +174,7 @@
 .hero-title {
   margin: 0.9rem 0 0.45rem;
   font-family: 'Palatino Linotype', 'Book Antiqua', serif;
-  font-size: clamp(2.6rem, 6vw, 4.7rem);
+  font-size: clamp(1.6rem, 6vw, 4.7rem);
   line-height: 0.95;
   color: #fffaf0;
 }
@@ -274,6 +355,7 @@
   display: flex;
   flex-direction: column;
   gap: 0.85rem;
+  z-index: 9;
 }
 
 .instructions-card {
@@ -290,16 +372,22 @@
 
 .instructions-card p,
 .selection-panel p,
-.asset-card p {
+.asset-card p,
+.hud-mobile-detail p {
   margin: 0.2rem 0 0;
   color: var(--ink-muted);
 }
 
 .icon-button,
-.tool-button,
-.chip-button {
+.chip-button,
+.primary-button,
+.secondary-button,
+.palette-button,
+.species-card,
+.dpad-button {
   pointer-events: auto;
   cursor: pointer;
+  touch-action: manipulation;
 }
 
 .icon-button {
@@ -315,41 +403,9 @@
 .tool-tray {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 1rem;
   pointer-events: none;
-}
-
-.zoom-control {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.55rem;
-  padding: 0.5rem;
-  border-radius: 999px;
-  background: linear-gradient(180deg, rgba(17, 37, 53, 0.92), rgba(8, 19, 31, 0.82));
-  border: 1px solid var(--line);
-  box-shadow: var(--shadow);
-  pointer-events: auto;
-}
-
-.zoom-readout {
-  min-width: 4.4rem;
-  text-align: center;
-}
-
-.zoom-readout strong {
-  display: block;
-  color: #fff8e6;
-}
-
-.tool-button {
-  width: 2.4rem;
-  height: 2.4rem;
-  border-radius: 999px;
-  background: rgba(255, 179, 71, 0.18);
-  color: #fff8e6;
-  font-size: 1.2rem;
-  font-weight: 800;
 }
 
 .chip-row {
@@ -358,6 +414,14 @@
   justify-content: flex-end;
   gap: 0.6rem;
   pointer-events: auto;
+}
+
+.bottom-tools.is-compact {
+  align-self: flex-start;
+}
+
+.chip-row.is-compact {
+  justify-content: flex-start;
 }
 
 .chip-button {
@@ -584,11 +648,31 @@
 @media (max-width: 760px) {
   .hud-layer {
     padding: 0.75rem;
-    padding-bottom: 7rem;
+    padding-bottom: 6.35rem;
   }
 
   .hud-top {
     gap: 0.55rem;
+  }
+
+  .hud-mobile {
+    width: min(100%, 22rem);
+    gap: 0.45rem;
+    transform: translateY(-50px);
+  }
+
+  .hud-mobile-row {
+    gap: 0.35rem;
+  }
+
+  .hud-mobile-button {
+    min-height: 3rem;
+    padding: 0.5rem 0.3rem;
+    border-radius: 16px;
+  }
+
+  .hud-mobile-detail {
+    padding: 0.72rem 0.85rem;
   }
 
   .hud-card {
@@ -601,16 +685,21 @@
   }
 
   .tool-tray {
-    flex-direction: column;
-    align-items: stretch;
+    align-items: flex-start;
+    justify-content: flex-start;
   }
 
   .chip-row {
-    justify-content: stretch;
+    justify-content: flex-start;
   }
 
-  .chip-button {
+  .bottom-tools:not(.is-compact) .chip-button {
     width: 100%;
+  }
+
+  .bottom-tools.is-compact .chip-button {
+    width: auto;
+    padding: 0.64rem 0.85rem;
   }
 
   .selection-panel {

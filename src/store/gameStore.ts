@@ -1,8 +1,32 @@
 import { create } from 'zustand'
 import { GAME_CONFIG } from '../config/gameConfig'
-import { allBabiesFed, createClutch, createInitialWorms, getUnlockedZoneIds, inputToWorldVector, randomPointInUnlockedZones, randomPointInZone } from '../engine/gameLogic'
+import {
+  createClutch,
+  createFollowChickFromEgg,
+  createInitialWorms,
+  getUnlockedZoneIds,
+  hasPendingRoundGoals,
+  inputToWorldVector,
+  pickPatrolHungerDelay,
+  promoteChicksToPatrol,
+  randomPointInUnlockedZones,
+  randomPointInZone,
+} from '../engine/gameLogic'
 import { PALETTES_BY_ID, SPECIES, SPECIES_BY_ID } from '../data/species'
-import type { EggState, FollowerState, InputDirection, InputState, PaletteId, PlayerInventory, PlayerState, RoundState, SessionPhase, SpeciesId, Vec3, WormState } from '../types/game'
+import type {
+  ChickState,
+  EggState,
+  InputDirection,
+  InputState,
+  PaletteId,
+  PlayerInventory,
+  PlayerState,
+  RoundState,
+  SessionPhase,
+  SpeciesId,
+  Vec3,
+  WormState,
+} from '../types/game'
 import { angleFromVec2, clamp, distance2D, moveToward, normalize2D } from '../utils/math'
 
 interface GameMetrics {
@@ -18,15 +42,17 @@ interface GameStoreState {
   round: RoundState
   worldTime: number
   eggs: EggState[]
-  followers: FollowerState[]
+  chicks: ChickState[]
   worms: WormState[]
   inventory: PlayerInventory
   player: PlayerState
+  moveTarget: Vec3 | null
   input: InputState
   metrics: GameMetrics
   selectSpecies: (speciesId: SpeciesId) => void
   selectPalette: (paletteId: PaletteId) => void
   adjustCameraZoom: (delta: number) => void
+  setMoveTarget: (target: Vec3 | null) => void
   setDirectionalInput: (direction: InputDirection, pressed: boolean) => void
   clearInput: () => void
   startSession: () => void
@@ -64,10 +90,13 @@ const createMetrics = (): GameMetrics => ({
   totalWormsDelivered: 0,
 })
 
+const getNextChickLabel = (eggs: EggState[], chicks: ChickState[]) =>
+  Math.max(0, ...eggs.map((egg) => egg.label), ...chicks.map((chick) => chick.label)) + 1
+
 const createSessionState = () => {
   const roundNumber = 1
   const unlockedZones = getUnlockedZoneIds(roundNumber)
-  const eggs = createClutch(roundNumber, 0)
+  const eggs = createClutch(roundNumber, 0, 1)
 
   return {
     phase: 'playing' as const,
@@ -75,10 +104,11 @@ const createSessionState = () => {
     cameraZoom: GAME_CONFIG.cameraZoom.default,
     round: createRoundState(roundNumber, eggs.length),
     eggs,
-    followers: [],
+    chicks: [],
     worms: createInitialWorms(unlockedZones),
     inventory: createInventory(),
     player: createPlayer(),
+    moveTarget: null,
     input: createInput(),
     metrics: createMetrics(),
   }
@@ -92,10 +122,11 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
   round: createRoundState(1, 0),
   worldTime: 0,
   eggs: [],
-  followers: [],
+  chicks: [],
   worms: [],
   inventory: createInventory(),
   player: createPlayer(),
+  moveTarget: null,
   input: createInput(),
   metrics: createMetrics(),
   selectSpecies: (speciesId) => {
@@ -120,8 +151,21 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
         GAME_CONFIG.cameraZoom.max,
       ),
     })),
+  setMoveTarget: (target) =>
+    set(() => ({
+      moveTarget:
+        target === null
+          ? null
+          : [
+              clamp(target[0], GAME_CONFIG.mapBounds.minX, GAME_CONFIG.mapBounds.maxX),
+              target[1],
+              clamp(target[2], GAME_CONFIG.mapBounds.minZ, GAME_CONFIG.mapBounds.maxZ),
+            ],
+      input: createInput(),
+    })),
   setDirectionalInput: (direction, pressed) =>
     set((state) => ({
+      moveTarget: pressed ? null : state.moveTarget,
       input: {
         ...state.input,
         [direction]: pressed,
@@ -140,10 +184,11 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
       round: createRoundState(1, 0),
       worldTime: 0,
       eggs: [],
-      followers: [],
+      chicks: [],
       worms: [],
       inventory: createInventory(),
       player: createPlayer(),
+      moveTarget: null,
       input: createInput(),
       metrics: createMetrics(),
     })
@@ -156,23 +201,41 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
 
       const nextWorldTime = state.worldTime + delta
       const movement = inputToWorldVector(state.input)
+      const hasDirectionalInput = movement.x !== 0 || movement.z !== 0
+      const targetDeltaX = hasDirectionalInput || state.moveTarget === null
+        ? 0
+        : state.moveTarget[0] - state.player.position[0]
+      const targetDeltaZ = hasDirectionalInput || state.moveTarget === null
+        ? 0
+        : state.moveTarget[2] - state.player.position[2]
+      const targetDistance = Math.hypot(targetDeltaX, targetDeltaZ)
+      const targetMovement =
+        targetDistance > 0.001 ? normalize2D(targetDeltaX, targetDeltaZ) : { x: 0, z: 0 }
+      const activeMovement = hasDirectionalInput ? movement : targetMovement
+      const movementStep = GAME_CONFIG.playerSpeed * delta
+      const nextX = hasDirectionalInput
+        ? state.player.position[0] + activeMovement.x * movementStep
+        : state.moveTarget === null
+          ? state.player.position[0]
+          : moveToward(state.player.position[0], state.moveTarget[0], movementStep * Math.abs(activeMovement.x || 1))
+      const nextZ = hasDirectionalInput
+        ? state.player.position[2] + activeMovement.z * movementStep
+        : state.moveTarget === null
+          ? state.player.position[2]
+          : moveToward(state.player.position[2], state.moveTarget[2], movementStep * Math.abs(activeMovement.z || 1))
       const movedPosition: Vec3 = [
-        clamp(
-          state.player.position[0] + movement.x * GAME_CONFIG.playerSpeed * delta,
-          GAME_CONFIG.mapBounds.minX,
-          GAME_CONFIG.mapBounds.maxX,
-        ),
+        clamp(nextX, GAME_CONFIG.mapBounds.minX, GAME_CONFIG.mapBounds.maxX),
         state.player.position[1],
-        clamp(
-          state.player.position[2] + movement.z * GAME_CONFIG.playerSpeed * delta,
-          GAME_CONFIG.mapBounds.minZ,
-          GAME_CONFIG.mapBounds.maxZ,
-        ),
+        clamp(nextZ, GAME_CONFIG.mapBounds.minZ, GAME_CONFIG.mapBounds.maxZ),
       ]
+      const hasMoveTarget =
+        !hasDirectionalInput &&
+        state.moveTarget !== null &&
+        distance2D(movedPosition, state.moveTarget) > 0.18
 
       const playerFacing =
-        movement.x !== 0 || movement.z !== 0
-          ? angleFromVec2(movement.x, movement.z)
+        activeMovement.x !== 0 || activeMovement.z !== 0
+          ? angleFromVec2(activeMovement.x, activeMovement.z)
           : state.player.facing
 
       let wormsInBag = state.inventory.worms
@@ -234,28 +297,105 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
         }
       })
 
-      let closestBabyIndex = -1
-      let closestBabyDistance = Number.POSITIVE_INFINITY
+      const chicksBeforeFeed = state.chicks.map((chick) => {
+        if (chick.mode !== 'patrol') {
+          return chick
+        }
 
-      for (const [index, egg] of state.eggs.entries()) {
-        if (egg.stage !== 'baby' || egg.wormsFed >= egg.wormsNeeded) {
+        const isHungry =
+          state.round.phase === 'playing' &&
+          chick.hungerState === 'sated' &&
+          nextWorldTime >= chick.hungerAt
+
+        if (isHungry) {
+          return {
+            ...chick,
+            hungerState: 'hungry' as const,
+            wormsFed: 0,
+            nextFeedAt: 0,
+          }
+        }
+
+        if (chick.hungerState === 'hungry') {
+          return chick
+        }
+
+        const dx = chick.wanderTarget[0] - chick.position[0]
+        const dz = chick.wanderTarget[2] - chick.position[2]
+        const distance = Math.hypot(dx, dz)
+        const direction = normalize2D(dx, dz)
+        const moveDistance = Math.min(distance, GAME_CONFIG.flockPatrolSpeed * delta)
+        const nextPosition: Vec3 = [
+          chick.position[0] + direction.x * moveDistance,
+          chick.position[1],
+          chick.position[2] + direction.z * moveDistance,
+        ]
+
+        return {
+          ...chick,
+          position: nextPosition,
+          facing:
+            moveDistance > 0.001 ? angleFromVec2(direction.x, direction.z) : chick.facing,
+          wanderTarget:
+            distance <= GAME_CONFIG.patrolReach
+              ? randomPointInZone(chick.zoneId)
+              : chick.wanderTarget,
+        }
+      })
+
+      let closestTarget:
+        | { kind: 'egg'; id: string; distance: number }
+        | { kind: 'chick'; id: string; distance: number }
+        | null = null
+
+      for (const egg of state.eggs) {
+        const stage = egg.stage === 'egg' && nextWorldTime >= egg.hatchAt ? 'baby' : egg.stage
+
+        if (stage !== 'baby' || egg.wormsFed >= egg.wormsNeeded) {
           continue
         }
 
         const distance = distance2D(movedPosition, egg.position)
-        if (distance <= GAME_CONFIG.feedRadius && distance < closestBabyDistance) {
-          closestBabyDistance = distance
-          closestBabyIndex = index
+
+        if (
+          distance <= GAME_CONFIG.feedRadius &&
+          (closestTarget === null || distance < closestTarget.distance)
+        ) {
+          closestTarget = {
+            kind: 'egg',
+            id: egg.id,
+            distance,
+          }
         }
       }
 
-      const newFollowers: FollowerState[] = []
+      for (const chick of chicksBeforeFeed) {
+        if (chick.mode !== 'patrol' || chick.hungerState !== 'hungry' || chick.wormsFed >= chick.wormsNeeded) {
+          continue
+        }
 
-      const eggs = state.eggs.flatMap((egg, index) => {
+        const distance = distance2D(movedPosition, chick.position)
+
+        if (
+          distance <= GAME_CONFIG.feedRadius &&
+          (closestTarget === null || distance < closestTarget.distance)
+        ) {
+          closestTarget = {
+            kind: 'chick',
+            id: chick.id,
+            distance,
+          }
+        }
+      }
+
+      const newChicks: ChickState[] = []
+
+      const eggs = state.eggs.flatMap((egg) => {
         const stage = egg.stage === 'egg' && nextWorldTime >= egg.hatchAt ? 'baby' : egg.stage
 
         if (
-          index === closestBabyIndex &&
+          closestTarget?.kind === 'egg' &&
+          closestTarget.id === egg.id &&
           stage === 'baby' &&
           wormsInBag > 0 &&
           nextWorldTime >= egg.nextFeedAt
@@ -266,12 +406,7 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
 
           if (wormsFed >= egg.wormsNeeded) {
             babiesFedCount += 1
-            newFollowers.push({
-              id: `${egg.id}-follower`,
-              label: egg.label,
-              position: [...egg.position] as Vec3,
-              facing: playerFacing,
-            })
+            newChicks.push(createFollowChickFromEgg({ ...egg, stage, wormsFed }, playerFacing))
             return []
           }
 
@@ -293,28 +428,63 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
         ]
       })
 
-      const followers = [...state.followers, ...newFollowers].reduce<FollowerState[]>(
-        (accumulator, follower, index) => {
-          const leaderPosition =
-            index === 0 ? movedPosition : accumulator[index - 1].position
+      const chicksAfterFeed = chicksBeforeFeed.map((chick) => {
+        if (
+          closestTarget?.kind !== 'chick' ||
+          closestTarget.id !== chick.id ||
+          chick.mode !== 'patrol' ||
+          chick.hungerState !== 'hungry' ||
+          wormsInBag <= 0 ||
+          nextWorldTime < chick.nextFeedAt
+        ) {
+          return chick
+        }
+
+        const wormsFed = chick.wormsFed + 1
+        wormsInBag -= 1
+        wormsDelivered += 1
+
+        if (wormsFed >= chick.wormsNeeded) {
+          babiesFedCount += 1
+          return {
+            ...chick,
+            hungerState: 'sated' as const,
+            hungerAt: nextWorldTime + pickPatrolHungerDelay(),
+            nextFeedAt: 0,
+            wormsFed: 0,
+            wanderTarget: randomPointInZone(chick.zoneId),
+          }
+        }
+
+        return {
+          ...chick,
+          wormsFed,
+          nextFeedAt: nextWorldTime + GAME_CONFIG.feedCooldown,
+        }
+      })
+
+      const patrolChicks = chicksAfterFeed.filter((chick) => chick.mode === 'patrol')
+      const followChicks = [...chicksAfterFeed.filter((chick) => chick.mode === 'follow'), ...newChicks].reduce<ChickState[]>(
+        (accumulator, chick, index) => {
+          const leaderPosition = index === 0 ? movedPosition : accumulator[index - 1].position
           const leaderFacing = index === 0 ? playerFacing : accumulator[index - 1].facing
-          const dx = leaderPosition[0] - follower.position[0]
-          const dz = leaderPosition[2] - follower.position[2]
+          const dx = leaderPosition[0] - chick.position[0]
+          const dz = leaderPosition[2] - chick.position[2]
           const distance = Math.hypot(dx, dz)
-          const desiredGap = 1.05 + Math.min(index, 6) * 0.1
+          const desiredGap = 0.9 + Math.min(index, 6) * 0.08
           const direction = normalize2D(dx, dz)
           const moveDistance =
             distance > desiredGap
-              ? Math.min(distance - desiredGap, GAME_CONFIG.playerSpeed * 0.72 * delta)
+              ? Math.min(distance - desiredGap, GAME_CONFIG.flockFollowSpeed * delta)
               : 0
           const nextPosition: Vec3 = [
-            follower.position[0] + direction.x * moveDistance,
-            follower.position[1],
-            follower.position[2] + direction.z * moveDistance,
+            chick.position[0] + direction.x * moveDistance,
+            chick.position[1],
+            chick.position[2] + direction.z * moveDistance,
           ]
 
           accumulator.push({
-            ...follower,
+            ...chick,
             position: nextPosition,
             facing:
               moveDistance > 0.001 ? angleFromVec2(direction.x, direction.z) : leaderFacing,
@@ -327,12 +497,14 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
 
       let round = state.round
       let nextEggs = eggs
+      let nextChicks = [...patrolChicks, ...followChicks]
 
       if (round.transitionAt !== null && nextWorldTime >= round.transitionAt) {
         const roundNumber = round.number + 1
-        nextEggs = createClutch(roundNumber, nextWorldTime)
+        nextEggs = createClutch(roundNumber, nextWorldTime, getNextChickLabel(nextEggs, nextChicks))
         round = createRoundState(roundNumber, nextEggs.length)
-      } else if (round.transitionAt === null && allBabiesFed(eggs)) {
+      } else if (round.transitionAt === null && !hasPendingRoundGoals(nextEggs, nextChicks)) {
+        nextChicks = promoteChicksToPatrol(nextChicks, nextWorldTime)
         round = {
           ...round,
           phase: 'round-clear',
@@ -345,7 +517,7 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
         worldTime: nextWorldTime,
         round,
         eggs: nextEggs,
-        followers,
+        chicks: nextChicks,
         worms,
         inventory: {
           ...state.inventory,
@@ -355,6 +527,7 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
           position: movedPosition,
           facing: playerFacing,
         },
+        moveTarget: hasMoveTarget ? state.moveTarget : null,
         metrics: {
           totalBabiesFed: babiesFedCount,
           totalWormsDelivered: wormsDelivered,

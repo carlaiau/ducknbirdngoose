@@ -1,4 +1,7 @@
+import { ASSET_MANIFEST_BY_ID } from '../data/assetManifest'
+import { SPECIES_BY_ID } from '../data/species'
 import type { PaletteDefinition, SpeciesId } from '../types/game'
+import { MarketplaceAsset } from './MarketplaceAsset'
 
 interface SpeciesModelProps {
   speciesId: SpeciesId
@@ -57,8 +60,22 @@ export const SpeciesModel = ({
   variant = 'adult',
   sleepy = false,
 }: SpeciesModelProps) => {
+  const species = SPECIES_BY_ID[speciesId]
+  const scale = variant === 'baby' ? 0.4375 : 1
+  const marketplaceAsset = ASSET_MANIFEST_BY_ID[species.assetId]
+
+  if (marketplaceAsset?.runtimePath) {
+    return (
+      <MarketplaceAsset
+        assetId={species.assetId}
+        palette={palette}
+        sleepy={sleepy}
+        scale={scale}
+      />
+    )
+  }
+
   const profile = PROFILES[speciesId]
-  const scale = variant === 'baby' ? 0.42 : 1
 
   return (
     <group scale={scale}>
