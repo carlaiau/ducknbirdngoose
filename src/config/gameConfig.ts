@@ -37,10 +37,12 @@ export const GAME_CONFIG = {
     max: 56,
     step: 2,
   },
+  cageRadius: 1.5,
+  personAutoFeedInterval: 3.2,
   mapBounds: {
-    minX: -15.5,
-    maxX: 15.5,
-    minZ: -10.5,
-    maxZ: 10.8,
+    minX: -20.5,
+    maxX: 20.5,
+    minZ: -15.5,
+    maxZ: 15.5,
   },
 } as const

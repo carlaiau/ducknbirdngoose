@@ -1,6 +1,7 @@
 export type Vec3 = [number, number, number]
 
 export type SpeciesId = 'bird' | 'duck' | 'goose'
+export type CharacterMode = 'bird' | 'person'
 export type PaletteId =
   | 'bird-dawn'
   | 'bird-lilac'
@@ -96,6 +97,7 @@ export interface ChickState {
 export interface PlayerInventory {
   worms: number
   capacity: number
+  caughtBirds: number
 }
 
 export interface PlayerState {

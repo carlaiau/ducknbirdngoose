@@ -172,6 +172,28 @@ export const createFollowChickFromEgg = (
   wormsNeeded: egg.wormsNeeded,
 })
 
+export const createPatrolChickFromEgg = (
+  egg: EggState,
+  worldTime: number,
+  rng: () => number = Math.random,
+): ChickState => ({
+  id: `${egg.id}-chick`,
+  label: egg.label,
+  zoneId: egg.zoneId,
+  position: [...egg.position] as Vec3,
+  facing: rng() * Math.PI * 2,
+  mode: 'patrol',
+  wanderTarget: randomPointInZone(egg.zoneId, rng),
+  hungerState: 'sated',
+  hungerAt: worldTime + pickPatrolHungerDelay(rng),
+  nextFeedAt: 0,
+  wormsFed: egg.wormsNeeded,
+  wormsNeeded: egg.wormsNeeded,
+})
+
+export const hasPendingPersonGoals = (eggs: EggState[], chicks: ChickState[]) =>
+  eggs.length > 0 || chicks.some((chick) => chick.mode === 'patrol')
+
 export const pickPatrolHungerDelay = (rng: () => number = Math.random) =>
   randomBetween(GAME_CONFIG.patrolHungryDelay.min, GAME_CONFIG.patrolHungryDelay.max, rng)
 

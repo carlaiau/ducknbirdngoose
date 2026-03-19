@@ -2,18 +2,19 @@ import { create } from 'zustand'
 import { GAME_CONFIG } from '../config/gameConfig'
 import {
   createClutch,
-  createFollowChickFromEgg,
   createInitialWorms,
+  createPatrolChickFromEgg,
   getUnlockedZoneIds,
+  hasPendingPersonGoals,
   hasPendingRoundGoals,
   inputToWorldVector,
   pickPatrolHungerDelay,
-  promoteChicksToPatrol,
   randomPointInUnlockedZones,
   randomPointInZone,
 } from '../engine/gameLogic'
 import { PALETTES_BY_ID, SPECIES, SPECIES_BY_ID } from '../data/species'
 import type {
+  CharacterMode,
   ChickState,
   EggState,
   InputDirection,
@@ -27,7 +28,8 @@ import type {
   Vec3,
   WormState,
 } from '../types/game'
-import { angleFromVec2, clamp, distance2D, moveToward, normalize2D } from '../utils/math'
+import { ALL_OBSTACLES } from '../data/obstacles'
+import { angleFromVec2, clamp, distance2D, moveToward, normalize2D, resolveObstacles } from '../utils/math'
 
 interface GameMetrics {
   totalBabiesFed: number
@@ -36,6 +38,7 @@ interface GameMetrics {
 
 interface GameStoreState {
   phase: SessionPhase
+  characterMode: CharacterMode
   selectedSpeciesId: SpeciesId
   selectedPaletteId: PaletteId
   cameraZoom: number
@@ -49,6 +52,7 @@ interface GameStoreState {
   moveTarget: Vec3 | null
   input: InputState
   metrics: GameMetrics
+  selectCharacterMode: (mode: CharacterMode) => void
   selectSpecies: (speciesId: SpeciesId) => void
   selectPalette: (paletteId: PaletteId) => void
   adjustCameraZoom: (delta: number) => void
@@ -76,6 +80,7 @@ const createPlayer = (): PlayerState => ({
 const createInventory = (): PlayerInventory => ({
   worms: 0,
   capacity: GAME_CONFIG.carryCapacity,
+  caughtBirds: 0,
 })
 
 const createInput = (): InputState => ({
@@ -116,6 +121,7 @@ const createSessionState = () => {
 
 export const useGameStore = create<GameStoreState>((set, get) => ({
   phase: 'menu',
+  characterMode: 'bird',
   selectedSpeciesId: SPECIES[0].id,
   selectedPaletteId: SPECIES[0].palettes[0].id,
   cameraZoom: GAME_CONFIG.cameraZoom.default,
@@ -129,6 +135,7 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
   moveTarget: null,
   input: createInput(),
   metrics: createMetrics(),
+  selectCharacterMode: (mode) => set({ characterMode: mode }),
   selectSpecies: (speciesId) => {
     const species = SPECIES_BY_ID[speciesId]
     set({
@@ -223,10 +230,16 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
         : state.moveTarget === null
           ? state.player.position[2]
           : moveToward(state.player.position[2], state.moveTarget[2], movementStep * Math.abs(activeMovement.z || 1))
-      const movedPosition: Vec3 = [
+      const clampedPosition: Vec3 = [
         clamp(nextX, GAME_CONFIG.mapBounds.minX, GAME_CONFIG.mapBounds.maxX),
         state.player.position[1],
         clamp(nextZ, GAME_CONFIG.mapBounds.minZ, GAME_CONFIG.mapBounds.maxZ),
+      ]
+      const resolved = resolveObstacles(clampedPosition, ALL_OBSTACLES)
+      const movedPosition: Vec3 = [
+        clamp(resolved[0], GAME_CONFIG.mapBounds.minX, GAME_CONFIG.mapBounds.maxX),
+        resolved[1],
+        clamp(resolved[2], GAME_CONFIG.mapBounds.minZ, GAME_CONFIG.mapBounds.maxZ),
       ]
       const hasMoveTarget =
         !hasDirectionalInput &&
@@ -238,6 +251,7 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
           ? angleFromVec2(activeMovement.x, activeMovement.z)
           : state.player.facing
 
+      const isPersonMode = state.characterMode === 'person'
       let wormsInBag = state.inventory.worms
       let babiesFedCount = state.metrics.totalBabiesFed
       let wormsDelivered = state.metrics.totalWormsDelivered
@@ -263,23 +277,22 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
         const dx = worm.wanderTarget[0] - worm.position[0]
         const dz = worm.wanderTarget[2] - worm.position[2]
         const distance = Math.hypot(dx, dz)
-        const directionX = distance === 0 ? 0 : dx / distance
-        const directionZ = distance === 0 ? 0 : dz / distance
+        const direction = normalize2D(dx, dz)
 
         const nextX = moveToward(
           worm.position[0],
           worm.wanderTarget[0],
-          GAME_CONFIG.wormSpeed * delta * Math.abs(directionX || 1),
+          GAME_CONFIG.wormSpeed * delta * Math.abs(direction.x || 1),
         )
         const nextZ = moveToward(
           worm.position[2],
           worm.wanderTarget[2],
-          GAME_CONFIG.wormSpeed * delta * Math.abs(directionZ || 1),
+          GAME_CONFIG.wormSpeed * delta * Math.abs(direction.z || 1),
         )
 
         const nextPosition: Vec3 = [nextX, worm.position[1], nextZ]
 
-        if (distance2D(movedPosition, nextPosition) <= GAME_CONFIG.collectRadius && wormsInBag < GAME_CONFIG.carryCapacity) {
+        if (!isPersonMode && distance2D(movedPosition, nextPosition) <= GAME_CONFIG.collectRadius && wormsInBag < GAME_CONFIG.carryCapacity) {
           wormsInBag += 1
           return {
             ...worm,
@@ -343,172 +356,150 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
         }
       })
 
-      let closestTarget:
-        | { kind: 'egg'; id: string; distance: number }
-        | { kind: 'chick'; id: string; distance: number }
-        | null = null
-
-      for (const egg of state.eggs) {
-        const stage = egg.stage === 'egg' && nextWorldTime >= egg.hatchAt ? 'baby' : egg.stage
-
-        if (stage !== 'baby' || egg.wormsFed >= egg.wormsNeeded) {
-          continue
-        }
-
-        const distance = distance2D(movedPosition, egg.position)
-
-        if (
-          distance <= GAME_CONFIG.feedRadius &&
-          (closestTarget === null || distance < closestTarget.distance)
-        ) {
-          closestTarget = {
-            kind: 'egg',
-            id: egg.id,
-            distance,
-          }
-        }
-      }
-
-      for (const chick of chicksBeforeFeed) {
-        if (chick.mode !== 'patrol' || chick.hungerState !== 'hungry' || chick.wormsFed >= chick.wormsNeeded) {
-          continue
-        }
-
-        const distance = distance2D(movedPosition, chick.position)
-
-        if (
-          distance <= GAME_CONFIG.feedRadius &&
-          (closestTarget === null || distance < closestTarget.distance)
-        ) {
-          closestTarget = {
-            kind: 'chick',
-            id: chick.id,
-            distance,
-          }
-        }
-      }
-
       const newChicks: ChickState[] = []
+      let eggs: EggState[]
+      let chicksAfterFeed: ChickState[]
 
-      const eggs = state.eggs.flatMap((egg) => {
-        const stage = egg.stage === 'egg' && nextWorldTime >= egg.hatchAt ? 'baby' : egg.stage
+      if (isPersonMode) {
+        // Person mode: eggs auto-feed on a timer, no player involvement
+        eggs = state.eggs.flatMap((egg:any) => {
+          const stage = egg.stage === 'egg' && nextWorldTime >= egg.hatchAt ? 'baby' : egg.stage
+          if (stage !== 'baby') return [{ ...egg, stage }]
 
-        if (
-          closestTarget?.kind === 'egg' &&
-          closestTarget.id === egg.id &&
-          stage === 'baby' &&
-          wormsInBag > 0 &&
-          nextWorldTime >= egg.nextFeedAt
-        ) {
-          const wormsFed = egg.wormsFed + 1
-          wormsInBag -= 1
-          wormsDelivered += 1
+          let { nextFeedAt, wormsFed } = egg
+          if (nextFeedAt === 0) {
+            // First frame as baby: set the initial feed timer
+            nextFeedAt = nextWorldTime + GAME_CONFIG.personAutoFeedInterval
+          } else if (nextWorldTime >= nextFeedAt) {
+            wormsFed += 1
+            nextFeedAt = nextWorldTime + GAME_CONFIG.personAutoFeedInterval
+          }
 
           if (wormsFed >= egg.wormsNeeded) {
             babiesFedCount += 1
-            newChicks.push(createFollowChickFromEgg({ ...egg, stage, wormsFed }, playerFacing))
+            newChicks.push(createPatrolChickFromEgg({ ...egg, stage, wormsFed }, nextWorldTime))
             return []
           }
 
-          return [
-            {
-              ...egg,
-              stage,
-              wormsFed,
-              nextFeedAt: nextWorldTime + GAME_CONFIG.feedCooldown,
-            },
-          ]
-        }
+          return [{ ...egg, stage, wormsFed, nextFeedAt }]
+        })
+        chicksAfterFeed = chicksBeforeFeed
+      } else {
+        // Bird mode: player collects worms and feeds eggs/chicks
+        let closestTarget:
+          | { kind: 'egg'; id: string; distance: number }
+          | { kind: 'chick'; id: string; distance: number }
+          | null = null
 
-        return [
-          {
-            ...egg,
-            stage,
-          },
-        ]
-      })
-
-      const chicksAfterFeed = chicksBeforeFeed.map((chick) => {
-        if (
-          closestTarget?.kind !== 'chick' ||
-          closestTarget.id !== chick.id ||
-          chick.mode !== 'patrol' ||
-          chick.hungerState !== 'hungry' ||
-          wormsInBag <= 0 ||
-          nextWorldTime < chick.nextFeedAt
-        ) {
-          return chick
-        }
-
-        const wormsFed = chick.wormsFed + 1
-        wormsInBag -= 1
-        wormsDelivered += 1
-
-        if (wormsFed >= chick.wormsNeeded) {
-          babiesFedCount += 1
-          return {
-            ...chick,
-            hungerState: 'sated' as const,
-            hungerAt: nextWorldTime + pickPatrolHungerDelay(),
-            nextFeedAt: 0,
-            wormsFed: 0,
-            wanderTarget: randomPointInZone(chick.zoneId),
+        for (const egg of state.eggs) {
+          const stage = egg.stage === 'egg' && nextWorldTime >= egg.hatchAt ? 'baby' : egg.stage
+          if (stage !== 'baby' || egg.wormsFed >= egg.wormsNeeded) continue
+          const distance = distance2D(movedPosition, egg.position)
+          if (distance <= GAME_CONFIG.feedRadius && (closestTarget === null || distance < closestTarget.distance)) {
+            closestTarget = { kind: 'egg', id: egg.id, distance }
           }
         }
 
-        return {
-          ...chick,
-          wormsFed,
-          nextFeedAt: nextWorldTime + GAME_CONFIG.feedCooldown,
+        for (const chick of chicksBeforeFeed) {
+          if (chick.mode !== 'patrol' || chick.hungerState !== 'hungry' || chick.wormsFed >= chick.wormsNeeded) continue
+          const distance = distance2D(movedPosition, chick.position)
+          if (distance <= GAME_CONFIG.feedRadius && (closestTarget === null || distance < closestTarget.distance)) {
+            closestTarget = { kind: 'chick', id: chick.id, distance }
+          }
         }
-      })
 
-      const patrolChicks = chicksAfterFeed.filter((chick) => chick.mode === 'patrol')
-      const followChicks = [...chicksAfterFeed.filter((chick) => chick.mode === 'follow'), ...newChicks].reduce<ChickState[]>(
-        (accumulator, chick, index) => {
-          const leaderPosition = index === 0 ? movedPosition : accumulator[index - 1].position
-          const leaderFacing = index === 0 ? playerFacing : accumulator[index - 1].facing
-          const dx = leaderPosition[0] - chick.position[0]
-          const dz = leaderPosition[2] - chick.position[2]
-          const distance = Math.hypot(dx, dz)
-          const desiredGap = 0.9 + Math.min(index, 6) * 0.08
-          const direction = normalize2D(dx, dz)
-          const moveDistance =
-            distance > desiredGap
-              ? Math.min(distance - desiredGap, GAME_CONFIG.flockFollowSpeed * delta)
-              : 0
-          const nextPosition: Vec3 = [
-            chick.position[0] + direction.x * moveDistance,
-            chick.position[1],
-            chick.position[2] + direction.z * moveDistance,
-          ]
+        eggs = state.eggs.flatMap((egg) => {
+          const stage = egg.stage === 'egg' && nextWorldTime >= egg.hatchAt ? 'baby' : egg.stage
 
-          accumulator.push({
-            ...chick,
-            position: nextPosition,
-            facing:
-              moveDistance > 0.001 ? angleFromVec2(direction.x, direction.z) : leaderFacing,
-          })
+          if (
+            closestTarget?.kind === 'egg' &&
+            closestTarget.id === egg.id &&
+            stage === 'baby' &&
+            wormsInBag > 0 &&
+            nextWorldTime >= egg.nextFeedAt
+          ) {
+            const wormsFed = egg.wormsFed + 1
+            wormsInBag -= 1
+            wormsDelivered += 1
 
-          return accumulator
-        },
-        [],
-      )
+            if (wormsFed >= egg.wormsNeeded) {
+              babiesFedCount += 1
+              newChicks.push(createPatrolChickFromEgg({ ...egg, stage, wormsFed }, nextWorldTime))
+              return []
+            }
+
+            return [{ ...egg, stage, wormsFed, nextFeedAt: nextWorldTime + GAME_CONFIG.feedCooldown }]
+          }
+
+          return [{ ...egg, stage }]
+        })
+
+        chicksAfterFeed = chicksBeforeFeed.map((chick) => {
+          if (
+            closestTarget?.kind !== 'chick' ||
+            closestTarget.id !== chick.id ||
+            chick.mode !== 'patrol' ||
+            chick.hungerState !== 'hungry' ||
+            wormsInBag <= 0 ||
+            nextWorldTime < chick.nextFeedAt
+          ) {
+            return chick
+          }
+
+          const wormsFed = chick.wormsFed + 1
+          wormsInBag -= 1
+          wormsDelivered += 1
+
+          if (wormsFed >= chick.wormsNeeded) {
+            babiesFedCount += 1
+            return {
+              ...chick,
+              hungerState: 'sated' as const,
+              hungerAt: nextWorldTime + pickPatrolHungerDelay(),
+              nextFeedAt: 0,
+              wormsFed: 0,
+              wanderTarget: randomPointInZone(chick.zoneId),
+            }
+          }
+
+          return { ...chick, wormsFed, nextFeedAt: nextWorldTime + GAME_CONFIG.feedCooldown }
+        })
+      }
+
+      const patrolChicks = [...chicksAfterFeed.filter((chick) => chick.mode === 'patrol'), ...newChicks]
 
       let round = state.round
       let nextEggs = eggs
-      let nextChicks = [...patrolChicks, ...followChicks]
+      let nextChicks = patrolChicks
+
+      // Person mode: catch patrol chicks that are within cage range
+      let caughtBirdsCount = state.inventory.caughtBirds
+      if (isPersonMode) {
+        nextChicks = nextChicks.filter((chick) => {
+          if (chick.mode !== 'patrol') return true
+          if (distance2D(movedPosition, chick.position) <= GAME_CONFIG.cageRadius) {
+            caughtBirdsCount += 1
+            return false
+          }
+          return true
+        })
+      }
 
       if (round.transitionAt !== null && nextWorldTime >= round.transitionAt) {
         const roundNumber = round.number + 1
         nextEggs = createClutch(roundNumber, nextWorldTime, getNextChickLabel(nextEggs, nextChicks))
         round = createRoundState(roundNumber, nextEggs.length)
-      } else if (round.transitionAt === null && !hasPendingRoundGoals(nextEggs, nextChicks)) {
-        nextChicks = promoteChicksToPatrol(nextChicks, nextWorldTime)
-        round = {
-          ...round,
-          phase: 'round-clear',
-          transitionAt: nextWorldTime + GAME_CONFIG.roundDelay,
+        caughtBirdsCount = 0 // reset per-round count for person mode
+      } else if (round.transitionAt === null) {
+        const pending = isPersonMode
+          ? hasPendingPersonGoals(nextEggs, nextChicks)
+          : hasPendingRoundGoals(nextEggs, nextChicks)
+        if (!pending) {
+          round = {
+            ...round,
+            phase: 'round-clear',
+            transitionAt: nextWorldTime + GAME_CONFIG.roundDelay,
+          }
         }
       }
 
@@ -521,7 +512,8 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
         worms,
         inventory: {
           ...state.inventory,
-          worms: wormsInBag,
+          worms: isPersonMode ? 0 : wormsInBag,
+          caughtBirds: caughtBirdsCount,
         },
         player: {
           position: movedPosition,

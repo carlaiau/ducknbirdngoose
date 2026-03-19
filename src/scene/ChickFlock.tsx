@@ -13,17 +13,14 @@ export const ChickFlock = () => {
     <>
       {chicks.map((chick, index) => {
         const isHungryPatrol = chick.mode === 'patrol' && chick.hungerState === 'hungry'
-        const bob =
-          chick.mode === 'follow'
-            ? Math.sin(worldTime * 5 + index * 0.8) * 0.04
-            : Math.sin(worldTime * 3.2 + index * 0.7) * 0.02
+        const bob = Math.sin(worldTime * 3.2 + index * 0.7) * 0.02
 
         return (
           <group
             key={chick.id}
             position={[chick.position[0], 0.16 + bob, chick.position[2]]}
             rotation={[0, chick.facing, 0]}
-            scale={chick.mode === 'follow' ? [0.68, 0.68, 0.68] : [0.62, 0.62, 0.62]}
+            scale={[0.62, 0.62, 0.62]}
           >
             <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.03, 0]}>
               <circleGeometry args={[0.42, 18]} />

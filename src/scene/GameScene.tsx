@@ -28,7 +28,7 @@ export default function GameScene() {
       dpr={[1, 1.5]}
     >
       <color attach="background" args={['#91bdf2']} />
-      <fog attach="fog" args={['#91bdf2', 18, 42]} />
+      <fog attach="fog" args={['#91bdf2', 24, 60]} />
       <OrthographicCamera
         ref={cameraRef}
         makeDefault

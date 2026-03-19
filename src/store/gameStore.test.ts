@@ -97,7 +97,7 @@ describe('gameStore', () => {
       eggs: [],
       chicks: [],
       worms: [],
-      moveTarget: [-6.8, GAME_CONFIG.playerSpawn[1], 1.2],
+      moveTarget: [-2.8, GAME_CONFIG.playerSpawn[1], 1.2],
       round: {
         number: 1,
         clutchSize: 0,
@@ -116,7 +116,7 @@ describe('gameStore', () => {
     useGameStore.getState().advance(1)
 
     const arrivedState = useGameStore.getState()
-    expect(arrivedState.player.position[0]).toBeCloseTo(-6.8)
+    expect(arrivedState.player.position[0]).toBeCloseTo(-2.8)
     expect(arrivedState.moveTarget).toBeNull()
   })
 })

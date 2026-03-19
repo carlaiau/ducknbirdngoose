@@ -27,3 +27,23 @@ export const moveToward = (current: number, target: number, maxDelta: number) =>
 }
 
 export const angleFromVec2 = (x: number, z: number) => Math.atan2(x, z)
+
+export const resolveObstacles = (
+  pos: Vec3,
+  obstacles: ReadonlyArray<{ x: number; z: number; radius: number }>,
+  playerRadius = 0.4,
+): Vec3 => {
+  let [x, y, z] = pos
+  for (const obs of obstacles) {
+    const dx = x - obs.x
+    const dz = z - obs.z
+    const dist = Math.hypot(dx, dz)
+    const minDist = obs.radius + playerRadius
+    if (dist < minDist) {
+      const push = dist < 0.001 ? minDist : (minDist / dist)
+      x = obs.x + (dist < 0.001 ? minDist : dx * push)
+      z = obs.z + (dist < 0.001 ? 0 : dz * push)
+    }
+  }
+  return [x, y, z]
+}

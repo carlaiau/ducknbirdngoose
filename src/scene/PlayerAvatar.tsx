@@ -1,11 +1,13 @@
 import { useMemo } from 'react'
 import { useGameStore, useSelectedPalette } from '../store/gameStore'
 import { useSelectedSpecies } from '../store/gameStore'
+import { PersonModel } from './PersonModel'
 import { SpeciesModel } from './SpeciesModel'
 
 export const PlayerAvatar = () => {
   const species = useSelectedSpecies()
   const palette = useSelectedPalette()
+  const characterMode = useGameStore((state) => state.characterMode)
   const player = useGameStore((state) => state.player)
   const moveTarget = useGameStore((state) => state.moveTarget)
   const input = useGameStore((state) => state.input)
@@ -27,7 +29,11 @@ export const PlayerAvatar = () => {
         <circleGeometry args={[0.95, 20]} />
         <meshBasicMaterial color="#163148" transparent opacity={0.25} />
       </mesh>
-      <SpeciesModel speciesId={species.id} palette={palette} />
+      {characterMode === 'person' ? (
+        <PersonModel />
+      ) : (
+        <SpeciesModel speciesId={species.id} palette={palette} />
+      )}
     </group>
   )
 }

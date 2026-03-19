@@ -23,6 +23,12 @@ export const NEST_SPOTS: NestSpot[] = [
   { id: 'dock-4', zoneId: 'dock', position: [12.4, 0.18, 3.8] },
   { id: 'dock-5', zoneId: 'dock', position: [8.5, 0.18, 5.6] },
   { id: 'dock-6', zoneId: 'dock', position: [6.2, 0.18, 2.8] },
+  { id: 'dock-7', zoneId: 'dock', position: [14.2, 0.18, -3.6] },
+  { id: 'dock-8', zoneId: 'dock', position: [15, 0.18, 5.4] },
+  { id: 'yard-11', zoneId: 'yard', position: [-14.8, 0.18, -7] },
+  { id: 'yard-12', zoneId: 'yard', position: [-16, 0.18, 2.8] },
+  { id: 'reeds-7', zoneId: 'reeds', position: [3.4, 0.18, -7.2] },
+  { id: 'reeds-8', zoneId: 'reeds', position: [-2.8, 0.18, 7.4] },
 ]
 
 export const WORM_PATCHES: WormPatchDefinition[] = [
@@ -31,6 +37,8 @@ export const WORM_PATCHES: WormPatchDefinition[] = [
   { id: 'yard-middle', zoneId: 'yard', minX: -13.2, maxX: -5.6, minZ: -1.8, maxZ: 1.8 },
   { id: 'reeds-west', zoneId: 'reeds', minX: -2.6, maxX: 3.2, minZ: -7, maxZ: -3.2 },
   { id: 'reeds-east', zoneId: 'reeds', minX: -2.4, maxX: 3.4, minZ: 2.6, maxZ: 7.1 },
-  { id: 'dock-west', zoneId: 'dock', minX: 5.8, maxX: 13.8, minZ: -7.1, maxZ: -2.2 },
-  { id: 'dock-east', zoneId: 'dock', minX: 5.6, maxX: 14.2, minZ: 2.4, maxZ: 7.3 },
+  { id: 'dock-west', zoneId: 'dock', minX: 5.8, maxX: 15.8, minZ: -7.5, maxZ: -2.2 },
+  { id: 'dock-east', zoneId: 'dock', minX: 5.6, maxX: 16, minZ: 2.4, maxZ: 7.8 },
+  { id: 'yard-far', zoneId: 'yard', minX: -18.5, maxX: -13.2, minZ: -5, maxZ: 5 },
+  { id: 'reeds-far', zoneId: 'reeds', minX: -3, maxX: 4.5, minZ: -10, maxZ: -7.5 },
 ]

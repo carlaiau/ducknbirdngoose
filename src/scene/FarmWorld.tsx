@@ -1,6 +1,8 @@
 import { Html } from '@react-three/drei'
+import { TREE_OBSTACLES } from '../data/obstacles'
 import { useGameStore } from '../store/gameStore'
 import { ChickFlock } from './ChickFlock'
+import { HouseModel } from './HouseModel'
 import { NestCluster } from './NestCluster'
 import { PlayerAvatar } from './PlayerAvatar'
 import { WormField } from './WormField'
@@ -9,6 +11,197 @@ const unlockRounds = {
   reeds: 3,
   dock: 5,
 } as const
+
+const LowPolyTree = ({ position, scale = 1 }: { position: [number, number, number]; scale?: number }) => (
+  <group position={position} scale={[scale, scale, scale]}>
+    <mesh castShadow receiveShadow position={[0, 0.52, 0]}>
+      <boxGeometry args={[0.3, 1.05, 0.3]} />
+      <meshStandardMaterial color="#7a5233" flatShading />
+    </mesh>
+    <mesh castShadow position={[0, 1.7, 0]}>
+      <coneGeometry args={[1.15, 1.5, 6]} />
+      <meshStandardMaterial color="#4a7c45" flatShading />
+    </mesh>
+    <mesh castShadow position={[0, 2.6, 0]}>
+      <coneGeometry args={[0.8, 1.25, 6]} />
+      <meshStandardMaterial color="#5c9652" flatShading />
+    </mesh>
+    <mesh castShadow position={[0, 3.3, 0]}>
+      <coneGeometry args={[0.45, 0.9, 5]} />
+      <meshStandardMaterial color="#6aad5e" flatShading />
+    </mesh>
+  </group>
+)
+
+const LowPolyRock = ({
+  position,
+  size = 0.55,
+  color = '#8a9ba3',
+}: {
+  position: [number, number, number]
+  size?: number
+  color?: string
+}) => (
+  <mesh castShadow receiveShadow position={position}>
+    <icosahedronGeometry args={[size, 0]} />
+    <meshStandardMaterial color={color} flatShading />
+  </mesh>
+)
+
+const SmallPond = ({ position }: { position: [number, number, number] }) => (
+  <group position={position}>
+    <mesh receiveShadow rotation={[-Math.PI / 2, 0, 0]}>
+      <circleGeometry args={[2.2, 10]} />
+      <meshStandardMaterial color="#68bfd6" flatShading />
+    </mesh>
+    <mesh receiveShadow rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.005, 0]} scale={0.65}>
+      <circleGeometry args={[2.2, 8]} />
+      <meshStandardMaterial color="#3c799b" flatShading />
+    </mesh>
+  </group>
+)
+
+const ReedClump = ({
+  position,
+  count = 3,
+  color = '#7da56b',
+}: {
+  position: [number, number, number]
+  count?: number
+  color?: string
+}) => (
+  <group position={position}>
+    {Array.from({ length: count }, (_, i) => (
+      <mesh
+        key={i}
+        castShadow
+        position={[i * 0.14 - (count * 0.07), 0.55 + i * 0.09, i * 0.04]}
+        rotation={[0, 0, i * 0.07 - 0.07]}
+      >
+        <boxGeometry args={[0.07, 1.2 + i * 0.12, 0.07]} />
+        <meshStandardMaterial color={color} flatShading />
+      </mesh>
+    ))}
+  </group>
+)
+
+const TreeGrove = () => (
+  <group>
+    {/* West tree line (beyond Frankie's house) */}
+    <LowPolyTree position={[-20, 0, -10]} scale={0.9} />
+    <LowPolyTree position={[-21, 0, -5.5]} />
+    <LowPolyTree position={[-20.5, 0, 0]} scale={1.1} />
+    <LowPolyTree position={[-21, 0, 5]} scale={0.85} />
+    <LowPolyTree position={[-19.5, 0, 10]} />
+    <LowPolyTree position={[-17.5, 0, -13]} scale={0.95} />
+    <LowPolyTree position={[-19, 0, -7.5]} scale={0.88} />
+    <LowPolyTree position={[-20, 0, 2.5]} scale={0.78} />
+    <LowPolyTree position={[-18.5, 0, 7.5]} scale={1.05} />
+    <LowPolyTree position={[-16.5, 0, -11]} scale={0.9} />
+    {/* East tree line (beyond dock) */}
+    <LowPolyTree position={[18.5, 0, -11]} scale={0.9} />
+    <LowPolyTree position={[20, 0, -6]} />
+    <LowPolyTree position={[21, 0, -1]} scale={1.1} />
+    <LowPolyTree position={[20, 0, 4.5]} scale={0.88} />
+    <LowPolyTree position={[19, 0, 10.5]} />
+    <LowPolyTree position={[17, 0, 14]} scale={0.95} />
+    <LowPolyTree position={[19.5, 0, -8.5]} scale={0.85} />
+    <LowPolyTree position={[21, 0, 2]} scale={0.8} />
+    <LowPolyTree position={[20, 0, 8]} scale={1.0} />
+    <LowPolyTree position={[17.5, 0, -13]} scale={0.92} />
+    {/* North tree line */}
+    <LowPolyTree position={[-15, 0, 14.5]} scale={0.9} />
+    <LowPolyTree position={[-11, 0, 16]} scale={0.85} />
+    <LowPolyTree position={[-8, 0, 15.5]} />
+    <LowPolyTree position={[-4.5, 0, 16]} scale={0.95} />
+    <LowPolyTree position={[-1, 0, 14.5]} scale={1.05} />
+    <LowPolyTree position={[2.5, 0, 16]} scale={0.88} />
+    <LowPolyTree position={[6, 0, 15]} scale={0.92} />
+    <LowPolyTree position={[9.5, 0, 16]} scale={0.85} />
+    <LowPolyTree position={[13, 0, 14.5]} />
+    <LowPolyTree position={[-18, 0, 13]} scale={0.82} />
+    {/* South tree line */}
+    <LowPolyTree position={[-16, 0, -13]} scale={0.9} />
+    <LowPolyTree position={[-12, 0, -15]} scale={0.85} />
+    <LowPolyTree position={[-8.5, 0, -14.5]} />
+    <LowPolyTree position={[-4.5, 0, -16]} scale={0.95} />
+    <LowPolyTree position={[-1, 0, -15]} scale={1.0} />
+    <LowPolyTree position={[2.5, 0, -16]} scale={0.88} />
+    <LowPolyTree position={[6, 0, -14.5]} scale={0.93} />
+    <LowPolyTree position={[10, 0, -15.5]} scale={0.87} />
+    <LowPolyTree position={[13.5, 0, -14]} />
+    <LowPolyTree position={[17, 0, -14.5]} scale={0.9} />
+    {/* Corner fills */}
+    <LowPolyTree position={[-19, 0, 13]} scale={0.82} />
+    <LowPolyTree position={[19, 0, 13]} scale={0.85} />
+    <LowPolyTree position={[-19, 0, -12]} scale={0.8} />
+    <LowPolyTree position={[19, 0, -12]} scale={0.9} />
+    {/* Second-row and inland trees are rendered by ObstacleTrees (from TREE_OBSTACLES) */}
+  </group>
+)
+
+// Trees that correspond 1-to-1 with obstacle circles in obstacles.ts
+const ObstacleTrees = () => (
+  <group>
+    {TREE_OBSTACLES.map((obs) => (
+      <LowPolyTree key={`obs-tree-${obs.x}-${obs.z}`} position={[obs.x, 0, obs.z]} scale={0.9 + (Math.abs(obs.x * 7 + obs.z * 3) % 10) * 0.02} />
+    ))}
+  </group>
+)
+
+const HouseVillage = () => (
+  <group>
+    <HouseModel modelIndex={1} position={[-14.5, 0, -10.5]} rotationY={0.4} />
+    <HouseModel modelIndex={2} position={[4.5,   0, -12.0]} rotationY={Math.PI * 0.15} />
+    <HouseModel modelIndex={3} position={[10.0,  0, -11.5]} rotationY={Math.PI * 0.6} />
+    <HouseModel modelIndex={4} position={[-18.5, 0,  -8.0]} rotationY={Math.PI * 0.9} />
+    <HouseModel modelIndex={5} position={[-18.0, 0,   9.5]} rotationY={Math.PI * 1.2} />
+    <HouseModel modelIndex={1} position={[5.5,   0,  11.0]} rotationY={Math.PI * 0.7} />
+    <HouseModel modelIndex={2} position={[16.5,  0, -10.0]} rotationY={Math.PI * 1.4} />
+    <HouseModel modelIndex={3} position={[17.0,  0,   9.5]} rotationY={Math.PI * 0.3} />
+  </group>
+)
+
+const RockScatter = () => (
+  <group>
+    {/* Clusters near tree line borders */}
+    <LowPolyRock position={[-18, 0.3, -3]} size={0.6} color="#7a8b93" />
+    <LowPolyRock position={[-17.5, 0.25, -2]} size={0.38} color="#8a9ba3" />
+    <LowPolyRock position={[-19, 0.3, 8]} size={0.7} color="#6e7e87" />
+    <LowPolyRock position={[-18.5, 0.2, 9]} size={0.42} color="#7a8b93" />
+    <LowPolyRock position={[17, 0.3, -9]} size={0.65} color="#7a8b93" />
+    <LowPolyRock position={[17.5, 0.22, -8]} size={0.35} color="#8a9ba3" />
+    <LowPolyRock position={[19, 0.28, 7]} size={0.58} color="#6e7e87" />
+    <LowPolyRock position={[-5, 0.28, -13]} size={0.72} color="#7a8b93" />
+    <LowPolyRock position={[-4.5, 0.2, -12.5]} size={0.4} color="#8a9ba3" />
+    <LowPolyRock position={[9, 0.3, -13.5]} size={0.6} color="#7a8b93" />
+    <LowPolyRock position={[-10, 0.28, 13]} size={0.65} color="#6e7e87" />
+    <LowPolyRock position={[4, 0.3, 14.5]} size={0.55} color="#7a8b93" />
+    <LowPolyRock position={[4.5, 0.22, 14]} size={0.3} color="#8a9ba3" />
+    {/* Rocks near pond edges */}
+    <LowPolyRock position={[5.5, 0.25, -2.5]} size={0.48} color="#8a9ba3" />
+    <LowPolyRock position={[-1.5, 0.22, 2.8]} size={0.35} color="#7a8b93" />
+    <LowPolyRock position={[-4, 0.28, -3.5]} size={0.52} color="#6e7e87" />
+  </group>
+)
+
+const ExtraWaterFeatures = () => (
+  <group>
+    {/* Small pond in the north-east */}
+    <SmallPond position={[14, 0.04, 11.5]} />
+    <ReedClump position={[12.6, 0.05, 11.2]} count={4} />
+    <ReedClump position={[15.2, 0.05, 12.4]} count={3} />
+    {/* Shallow pool near south waterfall area */}
+    <SmallPond position={[8, 0.04, -13]} />
+    <ReedClump position={[6.8, 0.05, -12.6]} count={3} />
+    <ReedClump position={[9.2, 0.05, -13.5]} count={4} />
+    {/* Reeds along main pond edges */}
+    <ReedClump position={[-3.5, 0.05, -1.5]} count={3} />
+    <ReedClump position={[4.8, 0.05, 1.5]} count={4} />
+    <ReedClump position={[3.2, 0.05, -3.8]} count={3} />
+    <ReedClump position={[-1.8, 0.05, 2.6]} count={3} />
+  </group>
+)
 
 const WaterfallStandIn = () => (
   <group position={[5.8, 0.15, -8.9]}>
@@ -143,7 +336,7 @@ export const FarmWorld = () => {
   return (
     <group>
       <mesh receiveShadow rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
-        <planeGeometry args={[38, 30]} />
+        <planeGeometry args={[54, 44]} />
         <meshStandardMaterial color="#87ad74" flatShading />
       </mesh>
 
@@ -153,6 +346,12 @@ export const FarmWorld = () => {
       <ReedBank isUnlocked={reedsUnlocked} />
       <DockArea isUnlocked={dockUnlocked} />
       <WaterfallStandIn />
+
+      <TreeGrove />
+      <ObstacleTrees />
+      <HouseVillage />
+      <RockScatter />
+      <ExtraWaterFeatures />
 
       <ZoneTag
         position={[-0.2, 0.1, 7.6]}
