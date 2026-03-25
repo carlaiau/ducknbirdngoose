@@ -620,7 +620,6 @@
 @media (max-width: 760px) {
   .hud-layer {
     padding: 0.75rem;
-    padding-bottom: 6.35rem;
   }
 
   .hud-top {
@@ -630,7 +629,6 @@
   .hud-mobile {
     width: min(100%, 22rem);
     gap: 0.45rem;
-    transform: translateY(-50px);
   }
 
   .hud-mobile-row {
