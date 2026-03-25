@@ -153,10 +153,10 @@ export const GameShell = () => {
       <div className="hud-layer">
         {phase === 'playing' ? <Hud /> : <div />}
 
-        {phase === 'playing' ? (
-          <div className={`bottom-tools${isCoarsePointer ? ' is-compact' : ''}`}>
+        {phase === 'playing' && !isCoarsePointer ? (
+          <div className="bottom-tools">
             <div className="tool-tray" data-ui-touch="true">
-              <div className={`chip-row${isCoarsePointer ? ' is-compact' : ''}`}>
+              <div className="chip-row">
                 <button type="button" className="chip-button" onClick={resetSession}>
                   Back to picker
                 </button>

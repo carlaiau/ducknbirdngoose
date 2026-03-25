@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { GAME_CONFIG } from '../config/gameConfig'
 import { useCoarsePointer } from '../hooks/useCoarsePointer'
 import { useGameStore } from '../store/gameStore'
+import { startTransition } from 'react'
 
 const zoneCopy = {
   1: "Frankie's House Yard",
@@ -31,6 +32,7 @@ export const Hud = () => {
   const pendingFeedCount = eggs.length + hungryRoamingCount
   const zoneStatus = zoneCopy[Math.min(unlockedZoneCount, 3) as 1 | 2 | 3]
   const [activeMetric, setActiveMetric] = useState<MetricId | null>(null)
+  const resetSession = useGameStore((state) => state.resetSession)
   const isPerson = characterMode === 'person'
 
   const mobileMetrics = isPerson
@@ -102,6 +104,14 @@ export const Hud = () => {
     return (
       <div className="hud-mobile" data-ui-touch="true">
         <div className="hud-mobile-row">
+          <button
+            type="button"
+            className="hud-mobile-back"
+            aria-label="Back to picker"
+            onClick={() => startTransition(() => resetSession())}
+          >
+            ←
+          </button>
           {mobileMetrics.map((metric) => {
             const isActive = activeMetric === metric.id
 

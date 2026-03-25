@@ -57,9 +57,36 @@
 }
 
 .hud-mobile-row {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  display: flex;
   gap: 0.45rem;
+  align-items: stretch;
+}
+
+.hud-mobile-button {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.hud-mobile-back {
+  flex: 0 0 2.75rem;
+  min-height: 3.25rem;
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(17, 37, 53, 0.92), rgba(8, 19, 31, 0.82));
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+  color: #fffdf3;
+  font-size: 1.1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: auto;
+  touch-action: manipulation;
+  transition: background 150ms ease, border-color 150ms ease;
+}
+
+.hud-mobile-back:active {
+  background: linear-gradient(180deg, rgba(53, 78, 93, 0.96), rgba(14, 28, 40, 0.9));
+  border-color: rgba(255, 216, 152, 0.6);
 }
 .selection-panel{
   
@@ -633,6 +660,12 @@
 
   .hud-mobile-row {
     gap: 0.35rem;
+  }
+
+  .hud-mobile-back {
+    flex-basis: 2.5rem;
+    min-height: 3rem;
+    border-radius: 16px;
   }
 
   .hud-mobile-button {
