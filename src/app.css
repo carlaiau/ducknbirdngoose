@@ -68,6 +68,7 @@
 }
 
 .hud-mobile-back {
+  z-index:99;
   flex: 0 0 2.75rem;
   min-height: 3.25rem;
   border-radius: 18px;
