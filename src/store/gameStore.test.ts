@@ -68,13 +68,19 @@ describe('gameStore', () => {
     expect(useGameStore.getState().round.phase).toBe('playing')
   })
 
-  it('converts trailing chicks into patrol chicks when the round clears', () => {
+  it('keeps roaming chicks in patrol mode when the round clears', () => {
     useGameStore.setState((state) => ({
       ...state,
       phase: 'playing',
       worldTime: 0,
       eggs: [],
-      chicks: [baseChick],
+      chicks: [
+        {
+          ...baseChick,
+          mode: 'patrol',
+          hungerAt: 8,
+        },
+      ],
       worms: [],
       round: {
         number: 1,
@@ -91,7 +97,7 @@ describe('gameStore', () => {
     expect(gameState.round.phase).toBe('round-clear')
     expect(gameState.chicks[0]?.mode).toBe('patrol')
     expect(gameState.chicks[0]?.hungerState).toBe('sated')
-    expect(gameState.chicks[0]?.hungerAt).toBeGreaterThan(0.1)
+    expect(gameState.chicks[0]?.hungerAt).toBe(8)
   })
 
   it('moves toward a click target until it is reached', () => {

@@ -4,7 +4,6 @@ import { useGameStore } from '../store/gameStore'
 import { useGameInput } from '../hooks/useGameInput'
 import { useCoarsePointer } from '../hooks/useCoarsePointer'
 import { delayImport } from '../utils/delayImport'
-import { DPad } from './DPad'
 import { Hud } from './Hud'
 import { LoadingScreen } from './LoadingScreen'
 import { SelectionPanel } from './SelectionPanel'
@@ -175,8 +174,6 @@ export const GameShell = () => {
           </div>
         </div>
       ) : null}
-
-      {phase === 'playing' && isCoarsePointer ? <DPad /> : null}
     </div>
   )
 }
