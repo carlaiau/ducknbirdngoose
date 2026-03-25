@@ -353,16 +353,6 @@ export const FarmWorld = () => {
       <RockScatter />
       <ExtraWaterFeatures />
 
-      <ZoneTag
-        position={[-0.2, 0.1, 7.6]}
-        label={reedsUnlocked ? 'Reed Bank Open' : `Opens Round ${unlockRounds.reeds}`}
-        isUnlocked={reedsUnlocked}
-      />
-      <ZoneTag
-        position={[10.2, 0.1, 7.9]}
-        label={dockUnlocked ? 'Waterfall Bank Open' : `Opens Round ${unlockRounds.dock}`}
-        isUnlocked={dockUnlocked}
-      />
 
       <NestCluster />
       <WormField />

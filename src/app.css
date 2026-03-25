@@ -173,7 +173,7 @@
 
 .hero-title {
   margin: 0.9rem 0 0.45rem;
-  font-family: 'Palatino Linotype', 'Book Antiqua', serif;
+  font-family: Arial, Helvetica, sans-serif;
   font-size: clamp(1.6rem, 6vw, 4.7rem);
   line-height: 0.95;
   color: #fffaf0;
@@ -637,7 +637,7 @@
   }
 
   .species-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .palette-grid {
@@ -707,7 +707,17 @@
   }
 
   .hero-title {
-    font-size: clamp(2rem, 12vw, 3rem);
+    font-size: clamp(1rem, 12vw, 1.5rem);
+  }
+
+  .species-body {
+    display: none;
+  }
+
+  .instructions-card .status-pill,
+  .instructions-card .section-title,
+  .instructions-card .help-list {
+    display: none;
   }
 
   .dpad {

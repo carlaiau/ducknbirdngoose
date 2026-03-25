@@ -6,14 +6,14 @@ export const useCoarsePointer = () => {
       return () => undefined
     }
 
-    const mediaQuery = window.matchMedia('(pointer: coarse)')
+    const mediaQuery = window.matchMedia('(any-pointer: coarse)')
     mediaQuery.addEventListener('change', onStoreChange)
 
     return () => mediaQuery.removeEventListener('change', onStoreChange)
   }
 
   const getSnapshot = () =>
-    typeof window !== 'undefined' ? window.matchMedia('(pointer: coarse)').matches : false
+    typeof window !== 'undefined' ? window.matchMedia('(any-pointer: coarse)').matches : false
 
   return useSyncExternalStore(subscribe, getSnapshot, () => false)
 }
