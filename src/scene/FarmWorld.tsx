@@ -1,4 +1,4 @@
-import { Html } from '@react-three/drei'
+
 import { TREE_OBSTACLES } from '../data/obstacles'
 import { useGameStore } from '../store/gameStore'
 import { ChickFlock } from './ChickFlock'
@@ -6,11 +6,6 @@ import { HouseModel } from './HouseModel'
 import { NestCluster } from './NestCluster'
 import { PlayerAvatar } from './PlayerAvatar'
 import { WormField } from './WormField'
-
-const unlockRounds = {
-  reeds: 3,
-  dock: 5,
-} as const
 
 const LowPolyTree = ({ position, scale = 1 }: { position: [number, number, number]; scale?: number }) => (
   <group position={position} scale={[scale, scale, scale]}>
@@ -300,30 +295,6 @@ const ReedBank = ({ isUnlocked }: { isUnlocked: boolean }) => (
         ))}
       </group>
     ))}
-  </group>
-)
-
-const ZoneTag = ({
-  position,
-  label,
-  isUnlocked,
-}: {
-  position: [number, number, number]
-  label: string
-  isUnlocked: boolean
-}) => (
-  <group position={position}>
-    <mesh castShadow position={[0, 0.8, 0]}>
-      <boxGeometry args={[0.22, 1.7, 0.22]} />
-      <meshStandardMaterial color="#66432a" flatShading />
-    </mesh>
-    <mesh castShadow position={[0, 1.55, 0]} scale={[1.8, 0.9, 0.1]}>
-      <boxGeometry args={[1, 1, 1]} />
-      <meshStandardMaterial color={isUnlocked ? '#f5c36f' : '#58656c'} flatShading />
-    </mesh>
-    <Html position={[0, 1.55, 0]} center>
-      <div className={`zone-tag ${isUnlocked ? 'is-live' : ''}`}>{label}</div>
-    </Html>
   </group>
 )
 
