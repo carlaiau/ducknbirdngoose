@@ -63,7 +63,7 @@ export const Hud = () => {
           value: `${unlockedZoneCount}/3`,
           title: 'Zones open',
           summary: zoneStatus,
-          detail: 'More zones give birds more space to roam. Tap anywhere to move and pinch anywhere to zoom.',
+          detail: 'More zones give birds more space to roam. Tap to move, swipe to rotate, and pinch anywhere to zoom.',
         },
       ] as const)
     : ([
@@ -93,7 +93,7 @@ export const Hud = () => {
           value: `${unlockedZoneCount}/3`,
           title: 'Zones open',
           summary: zoneStatus,
-          detail: `Roaming chicks: ${roamingCount}. Worms served: ${totalWormsDelivered}. Tap anywhere to move and pinch anywhere to zoom.`,
+          detail: `Roaming chicks: ${roamingCount}. Worms served: ${totalWormsDelivered}. Tap to move, swipe to rotate, and pinch anywhere to zoom.`,
         },
       ] as const)
 
