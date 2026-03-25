@@ -16,6 +16,9 @@ const baseChick: ChickState = {
   nextFeedAt: 0,
   wormsFed: GAME_CONFIG.wormsPerBaby,
   wormsNeeded: GAME_CONFIG.wormsPerBaby,
+  wantsCaught: false,
+  wantsCaughtAt: 0,
+  homePosition: null
 }
 
 describe('gameStore', () => {
@@ -46,6 +49,8 @@ describe('gameStore', () => {
           hungerState: 'hungry',
           hungerAt: 0,
           wormsFed: 0,
+          wantsCaught: false,
+          wantsCaughtAt: 0,
         },
       ],
       worms: [],

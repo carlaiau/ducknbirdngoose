@@ -170,6 +170,9 @@ export const createFollowChickFromEgg = (
   nextFeedAt: 0,
   wormsFed: egg.wormsNeeded,
   wormsNeeded: egg.wormsNeeded,
+  wantsCaught: false,
+  wantsCaughtAt: Number.POSITIVE_INFINITY,
+  homePosition: null,
 })
 
 export const createPatrolChickFromEgg = (
@@ -189,13 +192,19 @@ export const createPatrolChickFromEgg = (
   nextFeedAt: 0,
   wormsFed: egg.wormsNeeded,
   wormsNeeded: egg.wormsNeeded,
+  wantsCaught: false,
+  wantsCaughtAt: worldTime + pickWantsCaughtCooldown(rng),
+  homePosition: null,
 })
 
 export const hasPendingPersonGoals = (eggs: EggState[], chicks: ChickState[]) =>
-  eggs.length > 0 || chicks.some((chick) => chick.mode === 'patrol')
+  eggs.length > 0 || chicks.some((chick) => chick.mode === 'patrol' || chick.mode === 'follow')
 
 export const pickPatrolHungerDelay = (rng: () => number = Math.random) =>
   randomBetween(GAME_CONFIG.patrolHungryDelay.min, GAME_CONFIG.patrolHungryDelay.max, rng)
+
+export const pickWantsCaughtCooldown = (rng: () => number = Math.random) =>
+  randomBetween(GAME_CONFIG.wantsCaughtCooldown.min, GAME_CONFIG.wantsCaughtCooldown.max, rng)
 
 export const promoteChicksToPatrol = (
   chicks: ChickState[],
@@ -215,6 +224,9 @@ export const promoteChicksToPatrol = (
       hungerAt: worldTime + pickPatrolHungerDelay(rng),
       nextFeedAt: 0,
       wormsFed: 0,
+      wantsCaught: false,
+      wantsCaughtAt: worldTime + pickWantsCaughtCooldown(rng),
+      homePosition: null,
     }
   })
 

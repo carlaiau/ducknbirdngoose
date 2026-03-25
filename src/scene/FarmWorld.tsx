@@ -236,26 +236,6 @@ const PondBackdrop = () => (
   </>
 )
 
-const FrankieHouse = () => (
-  <group position={[-13.6, 0.2, -0.4]}>
-    <mesh castShadow receiveShadow position={[0, 1.3, 0]}>
-      <boxGeometry args={[2.9, 2.2, 2.6]} />
-      <meshStandardMaterial color="#e7b880" flatShading />
-    </mesh>
-    <mesh castShadow position={[0, 2.7, 0]} rotation={[0, Math.PI / 4, 0]}>
-      <coneGeometry args={[2.3, 1.8, 4]} />
-      <meshStandardMaterial color="#914f3f" flatShading />
-    </mesh>
-    <mesh position={[1.15, 1.2, 1.31]} scale={[0.5, 1.1, 0.08]}>
-      <boxGeometry args={[1, 1, 1]} />
-      <meshStandardMaterial color="#4a3321" flatShading />
-    </mesh>
-    <mesh position={[0, 0.16, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-      <circleGeometry args={[3.8, 18]} />
-      <meshStandardMaterial color="#839b5e" flatShading />
-    </mesh>
-  </group>
-)
 
 const DockArea = ({ isUnlocked }: { isUnlocked: boolean }) => (
   <group position={[10.2, 0.05, 2.4]}>
@@ -313,7 +293,6 @@ export const FarmWorld = () => {
 
       <PondBackdrop />
 
-      <FrankieHouse />
       <ReedBank isUnlocked={reedsUnlocked} />
       <DockArea isUnlocked={dockUnlocked} />
       <WaterfallStandIn />

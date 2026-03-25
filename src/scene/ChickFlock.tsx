@@ -13,19 +13,24 @@ export const ChickFlock = () => {
     <>
       {chicks.map((chick, index) => {
         const isHungryPatrol = chick.mode === 'patrol' && chick.hungerState === 'hungry'
+        const isHomed = chick.mode === 'homed'
+        const isFollow = chick.mode === 'follow'
         const bob = Math.sin(worldTime * 3.2 + index * 0.7) * 0.02
+        const followBob = isFollow ? Math.abs(Math.sin(worldTime * 6 + index)) * 0.06 : 0
 
         return (
           <group
             key={chick.id}
-            position={[chick.position[0], 0.16 + bob, chick.position[2]]}
+            position={[chick.position[0], 0.16 + bob + followBob, chick.position[2]]}
             rotation={[0, chick.facing, 0]}
-            scale={[0.62, 0.62, 0.62]}
+            scale={isHomed ? [0.52, 0.52, 0.52] : [0.62, 0.62, 0.62]}
           >
-            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.03, 0]}>
-              <circleGeometry args={[0.42, 18]} />
-              <meshBasicMaterial color="#163148" transparent opacity={0.18} />
-            </mesh>
+            {!isHomed && (
+              <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.03, 0]}>
+                <circleGeometry args={[0.42, 18]} />
+                <meshBasicMaterial color="#163148" transparent opacity={0.18} />
+              </mesh>
+            )}
 
             <SpeciesModel speciesId={species.id} palette={palette} variant="baby" />
 
@@ -53,6 +58,12 @@ export const ChickFlock = () => {
                   <div className="egg-badge">{chick.label}</div>
                 </Html>
               </>
+            ) : null}
+
+            {chick.wantsCaught && chick.mode === 'patrol' ? (
+              <Html position={[0, 2.4, 0]} center>
+                <div className="speech-bubble">pick me up!</div>
+              </Html>
             ) : null}
           </group>
         )

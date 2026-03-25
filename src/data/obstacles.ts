@@ -4,12 +4,8 @@ export interface ObstacleCircle {
   radius: number
 }
 
-// Frankie's existing procedural house (2.9 × 2.6 footprint)
-const FRANKIE_HOUSE: ObstacleCircle = { x: -13.6, z: -0.4, radius: 1.6 }
-
 // Placed GLB houses — radii match max(width, depth) / 2 of each model
 export const HOUSE_OBSTACLES: ObstacleCircle[] = [
-  FRANKIE_HOUSE,
   { x: -14.5, z: -10.5, radius: 2.8 }, // house 1  (3.24 × 5.71)
   { x:   4.5, z: -12.0, radius: 2.4 }, // house 2  (3.69 × 4.95)
   { x:  10.0, z: -11.5, radius: 1.3 }, // house 3  (2.64 × 2.58)
@@ -46,6 +42,18 @@ export const TREE_OBSTACLES: ObstacleCircle[] = [
   { x:   5.0, z:  -9.0, radius: 1.0 },
   { x: -16.0, z: -10.0, radius: 1.0 },
   { x:  16.0, z:   0.0, radius: 1.0 },
+]
+
+// House centre positions used for homed-bird wandering (y = ground level)
+export const HOME_POSITIONS: Array<[number, number, number]> = [
+  [-14.5, 0.16, -10.5],  // house 1
+  [4.5,   0.16, -12.0],  // house 2
+  [10.0,  0.16, -11.5],  // house 3
+  [-18.5, 0.16,  -8.0],  // house 4
+  [-18.0, 0.16,   9.5],  // house 5
+  [5.5,   0.16,  11.0],  // house 1 (second)
+  [16.5,  0.16, -10.0],  // house 2 (second)
+  [17.0,  0.16,   9.5],  // house 3 (second)
 ]
 
 export const ALL_OBSTACLES: ReadonlyArray<ObstacleCircle> = [

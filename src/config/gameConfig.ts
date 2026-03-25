@@ -38,6 +38,11 @@ export const GAME_CONFIG = {
     step: 2,
   },
   cageRadius: 1.5,
+  depositRadius: 2.8,
+  wantsCaughtShowDuration: 10,
+  wantsCaughtCooldown: { min: 18, max: 45 },
+  homedWanderRadius: 2.8,
+  homedPatrolSpeed: 0.7,
   personAutoFeedInterval: 3.2,
   mapBounds: {
     minX: -20.5,

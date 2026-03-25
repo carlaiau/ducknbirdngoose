@@ -9,6 +9,7 @@ import {
   hasPendingRoundGoals,
   inputToWorldVector,
   pickPatrolHungerDelay,
+  pickWantsCaughtCooldown,
   randomPointInUnlockedZones,
   randomPointInZone,
 } from '../engine/gameLogic'
@@ -28,7 +29,7 @@ import type {
   Vec3,
   WormState,
 } from '../types/game'
-import { ALL_OBSTACLES } from '../data/obstacles'
+import { ALL_OBSTACLES, HOME_POSITIONS } from '../data/obstacles'
 import { angleFromVec2, clamp, distance2D, moveToward, normalize2D, resolveObstacles } from '../utils/math'
 
 interface GameMetrics {
@@ -42,6 +43,7 @@ interface GameStoreState {
   selectedSpeciesId: SpeciesId
   selectedPaletteId: PaletteId
   cameraZoom: number
+  cameraAngle: number
   round: RoundState
   worldTime: number
   eggs: EggState[]
@@ -56,6 +58,7 @@ interface GameStoreState {
   selectSpecies: (speciesId: SpeciesId) => void
   selectPalette: (paletteId: PaletteId) => void
   adjustCameraZoom: (delta: number) => void
+  adjustCameraAngle: (delta: number) => void
   setMoveTarget: (target: Vec3 | null) => void
   setDirectionalInput: (direction: InputDirection, pressed: boolean) => void
   clearInput: () => void
@@ -125,6 +128,7 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
   selectedSpeciesId: SPECIES[0].id,
   selectedPaletteId: SPECIES[0].palettes[0].id,
   cameraZoom: GAME_CONFIG.cameraZoom.default,
+  cameraAngle: Math.PI / 4,
   round: createRoundState(1, 0),
   worldTime: 0,
   eggs: [],
@@ -158,6 +162,8 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
         GAME_CONFIG.cameraZoom.max,
       ),
     })),
+  adjustCameraAngle: (delta) =>
+    set((state) => ({ cameraAngle: state.cameraAngle + delta })),
   setMoveTarget: (target) =>
     set(() => ({
       moveTarget:
@@ -188,6 +194,7 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
       phase: 'menu',
       selectedPaletteId: species.palettes[0]?.id ?? get().selectedPaletteId,
       cameraZoom: GAME_CONFIG.cameraZoom.default,
+      cameraAngle: Math.PI / 4,
       round: createRoundState(1, 0),
       worldTime: 0,
       eggs: [],
@@ -311,10 +318,60 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
       })
 
       const chicksBeforeFeed = state.chicks.map((chick) => {
-        if (chick.mode !== 'patrol') {
-          return chick
+        // Homed bird: wander peacefully near its assigned house
+        if (chick.mode === 'homed') {
+          if (!chick.homePosition) return chick
+          const dx = chick.wanderTarget[0] - chick.position[0]
+          const dz = chick.wanderTarget[2] - chick.position[2]
+          const distance = Math.hypot(dx, dz)
+          const direction = normalize2D(dx, dz)
+          const moveDistance = Math.min(distance, GAME_CONFIG.homedPatrolSpeed * delta)
+          const nextPosition: Vec3 = [
+            chick.position[0] + direction.x * moveDistance,
+            chick.position[1],
+            chick.position[2] + direction.z * moveDistance,
+          ]
+          let nextWander = chick.wanderTarget
+          if (distance <= GAME_CONFIG.patrolReach) {
+            const angle = Math.random() * Math.PI * 2
+            const radius = Math.random() * GAME_CONFIG.homedWanderRadius
+            nextWander = [
+              chick.homePosition[0] + Math.cos(angle) * radius,
+              chick.position[1],
+              chick.homePosition[2] + Math.sin(angle) * radius,
+            ]
+          }
+          return {
+            ...chick,
+            position: nextPosition,
+            facing: moveDistance > 0.001 ? angleFromVec2(direction.x, direction.z) : chick.facing,
+            wanderTarget: nextWander,
+          }
         }
 
+        // Follow bird: trail closely behind the player
+        if (chick.mode === 'follow') {
+          const offsetAngle = chick.label * 1.3
+          const targetX = movedPosition[0] + Math.cos(offsetAngle) * 0.6
+          const targetZ = movedPosition[2] + Math.sin(offsetAngle) * 0.6
+          const dx = targetX - chick.position[0]
+          const dz = targetZ - chick.position[2]
+          const distance = Math.hypot(dx, dz)
+          const direction = normalize2D(dx, dz)
+          const moveDistance = Math.min(distance, GAME_CONFIG.playerSpeed * delta)
+          const nextPosition: Vec3 = [
+            chick.position[0] + direction.x * moveDistance,
+            chick.position[1],
+            chick.position[2] + direction.z * moveDistance,
+          ]
+          return {
+            ...chick,
+            position: nextPosition,
+            facing: moveDistance > 0.001 ? angleFromVec2(direction.x, direction.z) : chick.facing,
+          }
+        }
+
+        // Patrol bird: hunger transitions + wantsCaught bubble timing + movement
         const isHungry =
           state.round.phase === 'playing' &&
           chick.hungerState === 'sated' &&
@@ -329,8 +386,19 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
           }
         }
 
+        // Update wantsCaught bubble timer
+        let nextWantsCaught = chick.wantsCaught
+        let nextWantsCaughtAt = chick.wantsCaughtAt
+        if (!chick.wantsCaught && nextWorldTime >= chick.wantsCaughtAt) {
+          nextWantsCaught = true
+          nextWantsCaughtAt = nextWorldTime + GAME_CONFIG.wantsCaughtShowDuration
+        } else if (chick.wantsCaught && nextWorldTime >= chick.wantsCaughtAt) {
+          nextWantsCaught = false
+          nextWantsCaughtAt = nextWorldTime + pickWantsCaughtCooldown()
+        }
+
         if (chick.hungerState === 'hungry') {
-          return chick
+          return { ...chick, wantsCaught: nextWantsCaught, wantsCaughtAt: nextWantsCaughtAt }
         }
 
         const dx = chick.wanderTarget[0] - chick.position[0]
@@ -353,6 +421,8 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
             distance <= GAME_CONFIG.patrolReach
               ? randomPointInZone(chick.zoneId)
               : chick.wanderTarget,
+          wantsCaught: nextWantsCaught,
+          wantsCaughtAt: nextWantsCaughtAt,
         }
       })
 
@@ -466,23 +536,54 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
         })
       }
 
-      const patrolChicks = [...chicksAfterFeed.filter((chick) => chick.mode === 'patrol'), ...newChicks]
+      const patrolChicks = [...chicksAfterFeed, ...newChicks]
 
       let round = state.round
       let nextEggs = eggs
       let nextChicks = patrolChicks
 
-      // Person mode: catch patrol chicks that are within cage range
+      // Person mode: pick up birds showing speech bubble, then deposit at houses
       let caughtBirdsCount = state.inventory.caughtBirds
       if (isPersonMode) {
-        nextChicks = nextChicks.filter((chick) => {
-          if (chick.mode !== 'patrol') return true
-          if (distance2D(movedPosition, chick.position) <= GAME_CONFIG.cageRadius) {
-            caughtBirdsCount += 1
-            return false
+        // Step 1: walk up to a bubbling patrol bird → it follows you
+        nextChicks = nextChicks.map((chick) => {
+          if (chick.mode !== 'patrol' || !chick.wantsCaught) return chick
+          if (distance2D(movedPosition, chick.position) > GAME_CONFIG.cageRadius) return chick
+          return {
+            ...chick,
+            mode: 'follow' as const,
+            wantsCaught: false,
+            wantsCaughtAt: Number.POSITIVE_INFINITY,
           }
-          return true
         })
+
+        // Step 2: walk to a house while carrying birds → deposit them there
+        const hasFollowBird = nextChicks.some((c) => c.mode === 'follow')
+        if (hasFollowBird) {
+          const nearHouse = HOME_POSITIONS.find(
+            (pos) => Math.hypot(movedPosition[0] - pos[0], movedPosition[2] - pos[2]) <= GAME_CONFIG.depositRadius,
+          )
+          if (nearHouse) {
+            let homedIndex = nextChicks.filter((c) => c.mode === 'homed').length
+            nextChicks = nextChicks.map((chick) => {
+              if (chick.mode !== 'follow') return chick
+              caughtBirdsCount += 1
+              const housePos = HOME_POSITIONS[homedIndex % HOME_POSITIONS.length]
+              homedIndex += 1
+              const angle = Math.random() * Math.PI * 2
+              const r = Math.random() * 1.2
+              return {
+                ...chick,
+                mode: 'homed' as const,
+                homePosition: [...housePos] as Vec3,
+                position: [housePos[0] + Math.cos(angle) * r, housePos[1], housePos[2] + Math.sin(angle) * r] as Vec3,
+                wanderTarget: [...housePos] as Vec3,
+                wantsCaught: false,
+                wantsCaughtAt: Number.POSITIVE_INFINITY,
+              }
+            })
+          }
+        }
       }
 
       if (round.transitionAt !== null && nextWorldTime >= round.transitionAt) {

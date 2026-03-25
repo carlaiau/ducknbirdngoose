@@ -18,11 +18,13 @@ export const Hud = () => {
   const unlockedZoneCount = useGameStore((state) => state.round.unlockedZones.length)
   const characterMode = useGameStore((state) => state.characterMode)
   const inventory = useGameStore((state) => state.inventory.worms)
-  const caughtBirds = useGameStore((state) => state.inventory.caughtBirds)
+
   const eggs = useGameStore((state) => state.eggs)
   const chicks = useGameStore((state) => state.chicks)
   const totalWormsDelivered = useGameStore((state) => state.metrics.totalWormsDelivered)
   const roamingCount = chicks.filter((chick) => chick.mode === 'patrol').length
+  const followCount = chicks.filter((chick) => chick.mode === 'follow').length
+  const homedCount = chicks.filter((chick) => chick.mode === 'homed').length
   const hungryRoamingCount = chicks.filter(
     (chick) => chick.mode === 'patrol' && chick.hungerState === 'hungry',
   ).length
@@ -37,22 +39,22 @@ export const Hud = () => {
           id: 'round',
           value: `${roundNumber}`,
           title: 'Round',
-          summary: `Clutch: ${clutchSize} birds to catch`,
-          detail: 'Birds hatch and feed themselves. Walk up to a roaming bird to cage it.',
+          summary: `Clutch: ${clutchSize} birds to home`,
+          detail: 'Birds hatch on their own. Wait for a speech bubble, then walk up to pick the bird up and carry it to any house.',
         },
         {
           id: 'bag',
-          value: `${caughtBirds}/${clutchSize}`,
-          title: 'Caught',
-          summary: `${caughtBirds} of ${clutchSize} birds caught`,
-          detail: 'Catch every bird in the clutch to clear the round.',
+          value: `${homedCount}/${clutchSize}`,
+          title: 'Homed',
+          summary: `${homedCount} homed · ${followCount} following you`,
+          detail: 'Walk to any house while carrying a bird to drop it off as a pet.',
         },
         {
           id: 'fed',
           value: `${eggs.length + roamingCount}`,
-          title: 'Loose birds',
+          title: 'Out there',
           summary: `${eggs.length} hatching, ${roamingCount} roaming`,
-          detail: 'Roaming birds are fully fed and can be caught. Hatching birds will join them soon.',
+          detail: 'Roaming birds will pop a speech bubble when they want to be picked up.',
         },
         {
           id: 'zones',
@@ -139,8 +141,13 @@ export const Hud = () => {
       </div>
       {isPerson ? (
         <div className="hud-card">
-          <span className="metric-label">Caught</span>
-          <div className="metric-value">{caughtBirds} / {clutchSize}</div>
+          <span className="metric-label">Homed</span>
+          <div className="metric-value">{homedCount} / {clutchSize}</div>
+          {followCount > 0 && (
+            <div style={{ fontSize: '0.82rem', color: 'var(--accent-soft)' }}>
+              Carrying {followCount} — find a house!
+            </div>
+          )}
         </div>
       ) : (
         <div className="hud-card">
@@ -151,7 +158,7 @@ export const Hud = () => {
       <div className="hud-card">
         {isPerson ? (
           <>
-            <span className="metric-label">Loose Birds</span>
+            <span className="metric-label">Out There</span>
             <div className="metric-value">{eggs.length + roamingCount}</div>
             <div style={{ fontSize: '0.82rem', color: 'var(--ink-muted)' }}>
               Hatching: {eggs.length} • Roaming: {roamingCount}

@@ -42,7 +42,7 @@ export const SelectionPanel = () => {
                 >
                   <span className="eyebrow">person</span>
                   <h3 className="species-title">The Catcher</h3>
-                  <p className="species-body">Watch the birds feed themselves, then catch them all with your cage.</p>
+                  <p className="species-body">Wait for a bird to ask to be picked up, carry it home, and keep it as a pet.</p>
                 </button>
               </div>
             </div>
@@ -53,13 +53,13 @@ export const SelectionPanel = () => {
               <div className="status-pill">Mobile-first controls enabled</div>
               {isPerson ? (
                 <>
-                  <h2 className="section-title" style={{ marginTop: '0.85rem' }}>How catching works</h2>
+                  <h2 className="section-title" style={{ marginTop: '0.85rem' }}>How homing works</h2>
                   <ul className="help-list">
-                    <li>Eggs hatch and the birds feed themselves — no worms needed from you.</li>
-                    <li>Once a bird is fully fed it roams freely around the map.</li>
-                    <li>Walk up to a roaming bird with your cage to catch it.</li>
-                    <li>Catch every bird in the clutch to clear the round.</li>
-                    <li>Zones still unlock over rounds, giving birds more space to roam.</li>
+                    <li>Eggs hatch and birds feed themselves — no worms needed from you.</li>
+                    <li>Watch for a speech bubble above a bird's head — that means it wants to be picked up.</li>
+                    <li>Walk up to a bubbling bird and it will follow you.</li>
+                    <li>Carry it to any house on the map to give it a home as your pet.</li>
+                    <li>Home every bird in the clutch to clear the round. Pets stay forever.</li>
                   </ul>
                 </>
               ) : (
